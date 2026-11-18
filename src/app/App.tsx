@@ -3,13 +3,16 @@ import { useExternalOpen } from '../feature/launch/use-external-open';
 import { FileDropZone } from '../feature/library/file-drop-zone';
 import { useVideoLibrary, VideoLibraryProvider } from '../feature/library/video-library-context';
 import { SettingProvider } from '../feature/setting/setting-context';
-import { HomePage, type HomeSection } from '../page/home/home-page';
+import type { LibrarySection } from '../feature/library/library-section';
+import { HomePage } from '../page/home/home-page';
 import { PlayerPage } from '../page/player/player-page';
+import { SettingPage } from '../page/setting/setting-page';
 
 type AppRoute =
-  | { page: 'home'; section: HomeSection }
+  | { page: 'home'; section: LibrarySection }
+  | { page: 'setting'; returnSection: LibrarySection }
   /** playlistIds is snapshotted on entry so the order stays stable while "recent" reshuffles. */
-  | { page: 'player'; videoId: string; playlistIds: string[]; returnSection: HomeSection };
+  | { page: 'player'; videoId: string; playlistIds: string[]; returnSection: LibrarySection };
 
 function AppShell() {
   const { videos } = useVideoLibrary();
@@ -35,14 +38,18 @@ function AppShell() {
 
   return (
     <FileDropZone onImported={opened => playOpened(opened.map(video => video.id))}>
-      {route.page === 'home' ? (
+      {route.page === 'home' && (
         <HomePage
           section={route.section}
           onSectionChange={section => setRoute({ page: 'home', section })}
+          onOpenSetting={() => setRoute({ page: 'setting', returnSection: route.section })}
           onPlay={play}
-          onOpened={playOpened}
         />
-      ) : (
+      )}
+      {route.page === 'setting' && (
+        <SettingPage onBack={() => setRoute({ page: 'home', section: route.returnSection })} />
+      )}
+      {route.page === 'player' && (
         <PlayerPage
           videoId={route.videoId}
           playlistIds={route.playlistIds}

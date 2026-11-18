@@ -12,6 +12,8 @@
     "package": "npm run build && electron-builder"
   },
   "dependencies": {
+    "@fontsource-variable/inter": "^5.2.5",
+    "@fontsource-variable/noto-sans-sc": "^5.2.5",
     "clsx": "^2.1.1",
     "lucide-react": "^0.511.0",
     "react": "^19.1.0",
@@ -34,6 +36,7 @@
   "build": {
     "appId": "com.mudio.app",
     "productName": "Mudio",
+    "icon": "public/icon.png",
     "directories": { "output": "release" },
     "files": ["dist/**", "dist-electron/**"],
     "fileAssociations": [

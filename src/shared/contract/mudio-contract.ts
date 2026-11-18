@@ -28,8 +28,12 @@ export interface VideoEntry {
 export const THEME_PREFERENCES = ['system', 'light', 'dark'] as const;
 export type ThemePreference = (typeof THEME_PREFERENCES)[number];
 
+export const LANGUAGES = ['zh-CN', 'en'] as const;
+export type Language = (typeof LANGUAGES)[number];
+
 export interface AppSetting {
   theme: ThemePreference;
+  language: Language;
   autoplayNext: boolean;
   resumePlayback: boolean;
 }

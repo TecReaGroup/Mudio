@@ -1,78 +1,89 @@
-import { Clock, Film, Settings, type LucideIcon } from 'lucide-react';
+import { Copy, Search, Settings, X, Youtube, type LucideIcon } from 'lucide-react';
+import { useRef, useState } from 'react';
+import { navSectionOf, type LibraryNavSection, type LibrarySection } from '../../feature/library/library-section';
 import { LibraryView } from '../../feature/library/library-view';
-import { LIBRARY_SECTION_TITLE, selectSectionVideos, type LibrarySection } from '../../feature/library/library-section';
-import { useVideoLibrary } from '../../feature/library/video-library-context';
-import { SettingPanel } from '../../feature/setting/setting-panel';
-import { cn } from '../../shared/lib/cn';
+import { PlaylistIndexView } from '../../feature/library/playlist-index-view';
+import { useMessage } from '../../feature/setting/use-message';
+import { BrowseShell } from '../../shared/ui/browse-shell';
+import { IconButton } from '../../shared/ui/button';
+import { INPUT_FOCUS_CLASS } from '../../shared/ui/control-class';
+import { NavList } from '../../shared/ui/nav-list';
 
-export type HomeSection = LibrarySection | 'setting';
-
-const LIBRARY_NAV: readonly { section: LibrarySection; icon: LucideIcon }[] = [
-  { section: 'all', icon: Film },
-  { section: 'recent', icon: Clock },
+const LIBRARY_NAV: readonly { section: LibraryNavSection; icon: LucideIcon }[] = [
+  { section: 'all', icon: Youtube },
+  { section: 'playlist', icon: Copy },
 ];
 
-interface SidebarItemProps {
-  icon: LucideIcon;
-  label: string;
-  count?: number;
-  isActive: boolean;
-  onClick: () => void;
+interface HomePageProps {
+  section: LibrarySection;
+  onSectionChange: (section: LibrarySection) => void;
+  onOpenSetting: () => void;
+  onPlay: (videoId: string, playlistIds: string[]) => void;
 }
 
-function SidebarItem({ icon: Icon, label, count, isActive, onClick }: SidebarItemProps) {
+export function HomePage({ section, onSectionChange, onOpenSetting, onPlay }: HomePageProps) {
+  const [searchQuery, setSearchQuery] = useState('');
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const message = useMessage();
+
+  const clearSearch = () => {
+    setSearchQuery('');
+    searchInputRef.current?.focus();
+  };
+
+  const navEntries = LIBRARY_NAV.map(({ section: navSection, icon }) => ({
+    value: navSection,
+    icon,
+    label: message.library.sectionTitle[navSection],
+  }));
+
+  const searchBox = (
+    <label className={`no-drag flex h-9 w-full items-center gap-2 rounded-control border border-transparent bg-sunken pl-3 pr-1 text-secondary ${INPUT_FOCUS_CLASS}`}>
+      <Search aria-hidden className="size-4 shrink-0" />
+      <input
+        ref={searchInputRef}
+        type="search"
+        value={searchQuery}
+        onChange={event => setSearchQuery(event.target.value)}
+        onKeyDown={event => {
+          if (event.key === 'Escape' && searchQuery) {
+            event.preventDefault();
+            setSearchQuery('');
+          }
+        }}
+        aria-label={message.library.searchPlaceholder}
+        placeholder={message.library.searchPlaceholder}
+        className="min-w-0 flex-1 bg-transparent text-control text-foreground outline-none placeholder:text-subtle [&::-webkit-search-cancel-button]:appearance-none"
+      />
+      {searchQuery && (
+        <IconButton size="sm" label={message.library.clearSearch} onClick={clearSearch}>
+          <X />
+        </IconButton>
+      )}
+    </label>
+  );
+
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        'no-drag flex h-9 w-full cursor-pointer items-center gap-2.5 rounded-md px-2.5 text-sm transition-colors',
-        isActive ? 'bg-accent font-medium text-foreground' : 'text-muted-foreground hover:bg-accent/60 hover:text-foreground',
+    <BrowseShell
+      topBarCenter={searchBox}
+      sidebar={<NavList label={message.library.navTitle} entries={navEntries} currentValue={navSectionOf(section)} onSelect={onSectionChange} />}
+      sidebarFooter={(
+        <IconButton size="lg" label={message.common.setting} layoutClassName="self-start" onClick={onOpenSetting}>
+          <Settings strokeWidth={1.75} />
+        </IconButton>
       )}
     >
-      <Icon className="size-4" />
-      <span className="flex-1 text-left">{label}</span>
-      {count !== undefined && <span className="text-xs tabular-nums text-muted-foreground">{count}</span>}
-    </button>
-  );
-}
-
-interface HomePageProps {
-  section: HomeSection;
-  onSectionChange: (section: HomeSection) => void;
-  onPlay: (videoId: string, playlistIds: string[]) => void;
-  onOpened: (videoIds: string[]) => void;
-}
-
-export function HomePage({ section, onSectionChange, onPlay, onOpened }: HomePageProps) {
-  const { videos } = useVideoLibrary();
-
-  return (
-    <div className="flex h-full">
-      <aside className="flex w-56 shrink-0 flex-col border-r border-border bg-sidebar">
-        <div className="drag-region flex h-16 shrink-0 items-center pl-[max(20px,var(--titlebar-inset-start))]">
-          <span className="text-base font-semibold tracking-tight">Mudio</span>
-        </div>
-        <nav className="flex-1 space-y-0.5 px-3">
-          <p className="px-2.5 pb-1.5 pt-2 text-[11px] font-medium text-muted-foreground">视频库</p>
-          {LIBRARY_NAV.map(({ section: navSection, icon }) => (
-            <SidebarItem
-              key={navSection}
-              icon={icon}
-              label={LIBRARY_SECTION_TITLE[navSection]}
-              count={selectSectionVideos(videos, navSection).length}
-              isActive={section === navSection}
-              onClick={() => onSectionChange(navSection)}
-            />
-          ))}
-        </nav>
-        <div className="border-t border-border p-3">
-          <SidebarItem icon={Settings} label="设置" isActive={section === 'setting'} onClick={() => onSectionChange('setting')} />
-        </div>
-      </aside>
-      <main className="min-w-0 flex-1">
-        {section === 'setting' ? <SettingPanel /> : <LibraryView section={section} onPlay={onPlay} onOpened={onOpened} />}
-      </main>
-    </div>
+      {section === 'playlist' ? (
+        <PlaylistIndexView onOpenPlaylist={onSectionChange} />
+      ) : (
+        <LibraryView
+          collection={section}
+          searchQuery={searchQuery}
+          onBack={section === 'all' ? undefined : () => onSectionChange('playlist')}
+          onClearSearch={clearSearch}
+          onPlay={onPlay}
+        />
+      )}
+    </BrowseShell>
   );
 }

@@ -1,14 +1,20 @@
 import type { VideoEntry } from '../../shared/contract/mudio-contract';
 
-export type LibrarySection = 'all' | 'recent';
+/** Where the library is browsing. Playlists open from the 'playlist' index, so they sit under its nav entry. */
+export type LibrarySection = 'all' | 'playlist' | Playlist;
+export type LibraryNavSection = 'all' | 'playlist';
+/** A section that lists videos, as opposed to the playlist index. */
+export type VideoCollection = 'all' | Playlist;
 
-export const LIBRARY_SECTION_TITLE: Record<LibrarySection, string> = {
-  all: '全部视频',
-  recent: '最近播放',
-};
+export const PLAYLISTS = ['recent'] as const;
+export type Playlist = typeof PLAYLISTS[number];
 
-export function selectSectionVideos(videos: VideoEntry[], section: LibrarySection): VideoEntry[] {
-  if (section === 'all') return videos;
+export function navSectionOf(section: LibrarySection): LibraryNavSection {
+  return section === 'all' || section === 'playlist' ? section : 'playlist';
+}
+
+export function selectCollectionVideos(videos: VideoEntry[], collection: VideoCollection): VideoEntry[] {
+  if (collection === 'all') return videos;
   return videos
     .filter((video): video is VideoEntry & { lastPlayedAt: string } => video.lastPlayedAt !== null)
     .sort((left, right) => right.lastPlayedAt.localeCompare(left.lastPlayedAt));

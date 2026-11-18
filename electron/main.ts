@@ -49,7 +49,7 @@ function startApp(): void {
       opener = new ExternalFileOpener(library, () => mainWindow);
 
       handleMediaProtocol(library);
-      registerLibraryIpc(library);
+      registerLibraryIpc(library, settingStore);
       registerSettingIpc(settingStore);
       registerLaunchIpc(opener);
       registerLogIpc();

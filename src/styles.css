@@ -1,30 +1,126 @@
 @import 'tailwindcss';
 
+/*
+ * Token layer. Business code may only reference the semantic roles below;
+ * Tailwind's default palette, radii and font sizes are cleared so raw values cannot leak in.
+ */
+@theme {
+  --color-*: initial;
+  --radius-*: initial;
+  --text-*: initial;
+
+  --color-black: #000000;
+  --color-white: #ffffff;
+
+  --radius-control-sm: 6px;
+  --radius-control: 8px;
+  --radius-card: 12px;
+  --radius-dialog: 16px;
+
+  --text-caption: 11px;
+  --text-caption--line-height: 16px;
+  --text-meta: 12px;
+  --text-meta--line-height: 16px;
+  --text-control: 13px;
+  --text-control--line-height: 18px;
+  --text-body: 14px;
+  --text-body--line-height: 20px;
+  --text-title-sm: 15px;
+  --text-title-sm--line-height: 20px;
+  --text-title: 17px;
+  --text-title--line-height: 24px;
+  --text-title-lg: 22px;
+  --text-title-lg--line-height: 28px;
+
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --default-transition-duration: var(--duration-short);
+  --default-transition-timing-function: var(--ease-standard);
+
+  --animate-fade-in: fade-in var(--duration-long) var(--ease-standard) both;
+  --animate-pop-in: pop-in var(--duration-medium) var(--ease-standard) both;
+  --animate-panel-in: panel-in var(--duration-long) var(--ease-standard) both;
+  --animate-overlay-in: overlay-in var(--duration-medium) var(--ease-standard) both;
+
+  @keyframes fade-in {
+    from { opacity: 0; transform: translateY(4px); }
+  }
+  @keyframes pop-in {
+    from { opacity: 0; transform: translateY(-4px) scale(0.98); }
+  }
+  @keyframes panel-in {
+    from { opacity: 0; transform: translateX(12px); }
+  }
+  /* Opacity only: moving a backdrop would expose the page edge. */
+  @keyframes overlay-in {
+    from { opacity: 0; }
+  }
+}
+
 @theme inline {
-  --color-background: var(--background);
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-sunken: var(--sunken);
+  --color-hover: var(--hover);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
   --color-foreground: var(--foreground);
-  --color-sidebar: var(--sidebar);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
+  --color-secondary: var(--secondary);
+  --color-subtle: var(--subtle);
+  --color-inverse: var(--inverse);
+  --color-on-inverse: var(--on-inverse);
   --color-accent: var(--accent);
-  --color-border: var(--border);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --font-sans: system-ui, -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --color-accent-soft: var(--accent-soft);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-on-danger: var(--on-danger);
+
+  --shadow-rest: var(--shadow-rest-value);
+  --shadow-raised: var(--shadow-raised-value);
+  --shadow-overlay: var(--shadow-overlay-value);
+
+  /* Inter has no CJK glyphs, so Chinese falls through to Noto Sans SC (Source Han Sans). */
+  --font-sans: 'Inter Variable', 'Noto Sans SC Variable', system-ui, sans-serif;
 }
 
 /* Theme follows prefers-color-scheme, which the main process drives via nativeTheme.themeSource. */
 :root {
   color-scheme: light dark;
-  --background: #ffffff;
-  --foreground: #18181b;
-  --sidebar: #fafafa;
-  --muted: #f4f4f5;
-  --muted-foreground: #71717a;
-  --accent: #f4f4f5;
-  --border: #e4e4e7;
-  --primary: #18181b;
-  --primary-foreground: #fafafa;
+  /* NOTE: --canvas must match WINDOW_BACKGROUND in electron/window/main-window.ts. */
+  --canvas: #faf9f7;
+  --surface: #ffffff;
+  --sunken: #efede9;
+  --hover: rgb(28 25 23 / 0.06);
+  --line: #e7e5e4;
+  --line-strong: #d6d3d1;
+  --foreground: #1c1917;
+  --secondary: #63605c;
+  --subtle: #a6a09b;
+  --inverse: #1c1917;
+  --on-inverse: #fafaf9;
+  --accent: #4a73d2;
+  --accent-soft: #e9eefb;
+  --success: #15803d;
+  --success-soft: #dcfce7;
+  --danger: #dc2626;
+  --danger-soft: #fee2e2;
+  --on-danger: #ffffff;
+  --scrollbar-thumb: rgb(0 0 0 / 0.22);
+
+  --shadow-rest-value: 0 1px 2px rgb(0 0 0 / 0.05);
+  --shadow-raised-value: 0 6px 16px -4px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.06);
+  --shadow-overlay-value: 0 18px 44px -10px rgb(0 0 0 / 0.22), 0 4px 12px -4px rgb(0 0 0 / 0.1);
+
+  --duration-short: 120ms;
+  --duration-medium: 200ms;
+  --duration-long: 320ms;
+
+  /* Stacking layers, low → high. Modals use the native top layer instead. */
+  --layer-raised: 10;
+  --layer-dropdown: 20;
+  --layer-drawer: 30;
+  --layer-overlay: 40;
 
   /* Space reserved for native window controls (Windows/Linux caption buttons, macOS traffic lights). */
   --titlebar-inset-start: 0px;
@@ -38,15 +134,29 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #09090b;
-    --foreground: #fafafa;
-    --sidebar: #0f0f11;
-    --muted: #18181b;
-    --muted-foreground: #a1a1aa;
-    --accent: #27272a;
-    --border: #27272a;
-    --primary: #fafafa;
-    --primary-foreground: #18181b;
+    --canvas: #0c0a09;
+    --surface: #161412;
+    --sunken: #1e1b19;
+    --hover: rgb(250 250 249 / 0.07);
+    --line: #292524;
+    --line-strong: #3d3935;
+    --foreground: #fafaf9;
+    --secondary: #a8a29e;
+    --subtle: #78716c;
+    --inverse: #fafaf9;
+    --on-inverse: #1c1917;
+    --accent: #7c9ce8;
+    --accent-soft: rgb(124 156 232 / 0.16);
+    --success: #4ade80;
+    --success-soft: rgb(74 222 128 / 0.14);
+    --danger: #f87171;
+    --danger-soft: rgb(248 113 113 / 0.14);
+    --on-danger: #18181b;
+    --scrollbar-thumb: rgb(255 255 255 / 0.2);
+
+    --shadow-rest-value: 0 1px 2px rgb(0 0 0 / 0.4);
+    --shadow-raised-value: 0 8px 20px -6px rgb(0 0 0 / 0.6), 0 2px 4px -2px rgb(0 0 0 / 0.4);
+    --shadow-overlay-value: 0 20px 48px -10px rgb(0 0 0 / 0.7), 0 4px 12px -4px rgb(0 0 0 / 0.5);
   }
 }
 
@@ -56,6 +166,33 @@
 
 @utility no-drag {
   -webkit-app-region: no-drag;
+}
+
+/* Thin, arrowless, transparent-track scrollbar that only shows while the area is hovered or focused. */
+@utility scrollbar-subtle {
+  scrollbar-gutter: stable;
+
+  &::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  &::-webkit-scrollbar-track,
+  &::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+  &::-webkit-scrollbar-button {
+    display: none;
+  }
+  &::-webkit-scrollbar-thumb {
+    border: 3px solid transparent;
+    border-radius: 9999px;
+    background-color: transparent;
+    background-clip: content-box;
+  }
+  &:hover::-webkit-scrollbar-thumb,
+  &:focus-within::-webkit-scrollbar-thumb {
+    background-color: var(--scrollbar-thumb);
+  }
 }
 
 html,
@@ -68,41 +205,74 @@ body {
   margin: 0;
   overflow: hidden;
   user-select: none;
-  background: var(--background);
+  background: var(--canvas);
   color: var(--foreground);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
 }
 
+h1,
+h2,
+h3 {
+  letter-spacing: -0.01em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after,
+  ::backdrop {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 @layer components {
   .range-slider {
+    --track-height: 4px;
+    --thumb-size: 12px;
     appearance: none;
-    height: 14px;
+    height: 16px;
     background: transparent;
     cursor: pointer;
   }
 
+  .range-slider:hover {
+    --track-height: 6px;
+  }
+
   .range-slider::-webkit-slider-runnable-track {
-    height: 4px;
+    height: var(--track-height);
     border-radius: 9999px;
     background: linear-gradient(
       to right,
       currentColor var(--slider-fill),
-      color-mix(in srgb, currentColor 28%, transparent) var(--slider-fill)
+      color-mix(in srgb, currentColor 25%, transparent) var(--slider-fill)
     );
+    transition: height var(--duration-short) var(--ease-standard);
   }
 
   .range-slider::-webkit-slider-thumb {
     appearance: none;
-    width: 12px;
-    height: 12px;
-    margin-top: -4px;
+    width: var(--thumb-size);
+    height: var(--thumb-size);
+    margin-top: calc((var(--track-height) - var(--thumb-size)) / 2);
     border-radius: 9999px;
     background: currentColor;
-    transition: transform 120ms;
+    box-shadow: 0 1px 3px rgb(0 0 0 / 0.35);
+    transform: scale(0.85);
+    transition: transform var(--duration-medium) var(--ease-standard);
   }
 
   .range-slider:hover::-webkit-slider-thumb {
-    transform: scale(1.2);
+    transform: scale(1.1);
+  }
+
+  .range-slider:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 4px;
+    border-radius: 4px;
   }
 }

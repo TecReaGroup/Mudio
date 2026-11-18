@@ -19,6 +19,11 @@ export function SettingProvider({ children }: { children: ReactNode }) {
       .catch(error => log('error', 'Setting', `Failed to load settings: ${describeError(error)}`));
   }, []);
 
+  const language = setting?.language;
+  useEffect(() => {
+    if (language) document.documentElement.lang = language;
+  }, [language]);
+
   if (!setting) return null;
 
   const updateSetting = (patch: Partial<AppSetting>) => {

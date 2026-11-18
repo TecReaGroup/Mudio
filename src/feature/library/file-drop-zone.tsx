@@ -3,6 +3,8 @@ import { useState, type DragEvent, type ReactNode } from 'react';
 import { mudio } from '../../shared/api/mudio';
 import type { VideoEntry } from '../../shared/contract/mudio-contract';
 import { describeError, log } from '../../shared/lib/logger';
+import { TEXT_CLASS } from '../../shared/ui/text-class';
+import { useMessage } from '../setting/use-message';
 
 function carriesFiles(event: DragEvent): boolean {
   return event.dataTransfer.types.includes('Files');
@@ -17,6 +19,7 @@ interface FileDropZoneProps {
 export function FileDropZone({ onImported, children }: FileDropZoneProps) {
   // Counter, because dragenter/dragleave also fire when crossing child elements.
   const [dragDepth, setDragDepth] = useState(0);
+  const message = useMessage().library;
 
   const handleDrop = (event: DragEvent) => {
     event.preventDefault();
@@ -44,9 +47,11 @@ export function FileDropZone({ onImported, children }: FileDropZoneProps) {
     >
       {children}
       {dragDepth > 0 && (
-        <div className="pointer-events-none absolute inset-3 z-50 flex flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-primary/40 bg-background/85 backdrop-blur-sm">
-          <Upload className="size-8 text-muted-foreground" strokeWidth={1.5} />
-          <p className="text-sm font-medium">松开以打开视频</p>
+        <div className="pointer-events-none absolute inset-2 z-(--layer-overlay) flex animate-overlay-in flex-col items-center justify-center gap-3 rounded-dialog border-2 border-dashed border-accent bg-surface/85 backdrop-blur-sm">
+          <span className="flex size-12 items-center justify-center rounded-full bg-accent-soft text-accent">
+            <Upload aria-hidden className="size-5" />
+          </span>
+          <p className={TEXT_CLASS.label}>{message.dropToOpen}</p>
         </div>
       )}
     </div>

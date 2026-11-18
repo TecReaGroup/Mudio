@@ -1,78 +1,83 @@
-import { FilePlus2, FolderPlus, Clapperboard } from 'lucide-react';
-import { mudio } from '../../shared/api/mudio';
+import { ChevronLeft } from 'lucide-react';
 import { SUPPORTED_VIDEO_EXTENSIONS } from '../../shared/contract/mudio-contract';
-import { describeError, log } from '../../shared/lib/logger';
-import { Button } from '../../shared/ui/button';
+import { Button, IconButton } from '../../shared/ui/button';
+import { EmptyState, ErrorBanner } from '../../shared/ui/feedback';
 import { PageHeader } from '../../shared/ui/page-header';
-import { LIBRARY_SECTION_TITLE, selectSectionVideos, type LibrarySection } from './library-section';
+import { useMessage } from '../setting/use-message';
+import { CardGrid } from './card-grid';
+import { ImportFolderButton } from './import-folder-button';
+import { selectCollectionVideos, type VideoCollection } from './library-section';
 import { VideoCard } from './video-card';
 import { useVideoLibrary } from './video-library-context';
 
 const SUPPORTED_FORMAT_HINT = SUPPORTED_VIDEO_EXTENSIONS.map(extension => `.${extension}`).join('  ');
 
-const EMPTY_MESSAGE: Record<LibrarySection, string> = {
-  all: '拖拽视频文件到窗口，或点击「打开文件」开始播放',
-  recent: '还没有播放记录',
-};
-
 interface LibraryViewProps {
-  section: LibrarySection;
+  collection: VideoCollection;
+  searchQuery: string;
+  /** Shows a back button before the title, for collections opened from another page. */
+  onBack?: () => void;
+  onClearSearch: () => void;
   /** playlistIds is the order the player should follow. */
   onPlay: (videoId: string, playlistIds: string[]) => void;
-  onOpened: (videoIds: string[]) => void;
 }
 
-export function LibraryView({ section, onPlay, onOpened }: LibraryViewProps) {
-  const { videos } = useVideoLibrary();
-  const sectionVideos = selectSectionVideos(videos, section);
-  const sectionVideoIds = sectionVideos.map(video => video.id);
+export function LibraryView({ collection, searchQuery, onBack, onClearSearch, onPlay }: LibraryViewProps) {
+  const { videos, loadError } = useVideoLibrary();
+  const message = useMessage();
+  const libraryMessage = message.library;
+  const trimmedQuery = searchQuery.trim();
+  const normalizedQuery = trimmedQuery.toLowerCase();
+  const collectionVideos = selectCollectionVideos(videos, collection)
+    .filter(video => video.title.toLowerCase().includes(normalizedQuery));
+  const collectionVideoIds = collectionVideos.map(video => video.id);
 
-  const openFiles = async () => {
-    const picked = await mudio.library.pickAndImportFiles();
-    if (picked.length > 0) onOpened(picked.map(video => video.id));
+  const renderEmptyState = () => {
+    if (trimmedQuery) {
+      return (
+        <EmptyState
+          title={libraryMessage.noMatch(trimmedQuery)}
+          hint={libraryMessage.noMatchHint}
+          action={<Button onClick={onClearSearch}>{libraryMessage.clearSearch}</Button>}
+        />
+      );
+    }
+    if (collection === 'recent') {
+      return <EmptyState title={libraryMessage.emptyTitle.recent} hint={libraryMessage.emptyRecentHint} />;
+    }
+    return (
+      <EmptyState
+        title={libraryMessage.emptyTitle.all}
+        hint={libraryMessage.emptyLibraryHint(SUPPORTED_FORMAT_HINT)}
+        action={<ImportFolderButton tone="secondary" size="md" />}
+      />
+    );
   };
 
-  const reportFailure = (action: string) => (error: unknown) =>
-    log('error', 'Library', `${action} failed: ${describeError(error)}`);
-
   return (
-    <div className="flex h-full flex-col">
+    <>
+      {loadError && <ErrorBanner message={libraryMessage.loadFailed} detail={loadError} />}
       <PageHeader
-        title={LIBRARY_SECTION_TITLE[section]}
-        description={`${sectionVideos.length} 个视频`}
-        actions={(
-          <>
-            <Button variant="outline" onClick={() => mudio.library.pickAndImportFolder().catch(reportFailure('Import folder'))}>
-              <FolderPlus />
-              导入文件夹
-            </Button>
-            <Button variant="primary" onClick={() => openFiles().catch(reportFailure('Open files'))}>
-              <FilePlus2 />
-              打开文件
-            </Button>
-          </>
+        title={libraryMessage.sectionTitle[collection]}
+        description={libraryMessage.videoCount(collectionVideos.length)}
+        leading={onBack && (
+          <IconButton label={message.common.back} onClick={onBack}>
+            <ChevronLeft />
+          </IconButton>
         )}
       />
-      <div className="flex-1 overflow-y-auto">
-        {sectionVideos.length === 0 ? (
-          <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
-            <Clapperboard className="size-10 text-muted-foreground" strokeWidth={1.25} />
-            <p className="text-sm">{EMPTY_MESSAGE[section]}</p>
-            {section === 'all' && <p className="text-xs text-muted-foreground">支持 {SUPPORTED_FORMAT_HINT}</p>}
-          </div>
-        ) : (
-          <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-x-5 gap-y-6 p-6">
-            {sectionVideos.map(video => (
-              <VideoCard
-                key={video.id}
-                video={video}
-                onPlay={() => onPlay(video.id, sectionVideoIds)}
-                onRemove={() => mudio.library.remove(video.id).catch(reportFailure('Remove video'))}
-              />
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
+      {collectionVideos.length === 0 ? (
+        <div className="flex-1">{renderEmptyState()}</div>
+      ) : (
+        // Keyed so switching collections replays the fade-in.
+        <CardGrid key={collection}>
+          {collectionVideos.map(video => (
+            <li key={video.id}>
+              <VideoCard video={video} onPlay={() => onPlay(video.id, collectionVideoIds)} />
+            </li>
+          ))}
+        </CardGrid>
+      )}
+    </>
   );
 }

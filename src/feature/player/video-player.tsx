@@ -4,14 +4,19 @@ import { videoSourceUrl } from '../../shared/api/mudio';
 import type { VideoEntry } from '../../shared/contract/mudio-contract';
 import { cn } from '../../shared/lib/cn';
 import { describeError, log } from '../../shared/lib/logger';
+import { Spinner } from '../../shared/ui/feedback';
 import { useSetting } from '../setting/setting-context';
+import { useMessage } from '../setting/use-message';
 import { PlayerControls, type PlaybackState, type PlayerCommands } from './player-controls';
 import { useAutoHideControls } from './use-auto-hide-controls';
+import { useDelayedFlag } from './use-delayed-flag';
 import { usePlaybackProgress } from './use-playback-progress';
 
 const SEEK_STEP_SEC = 5;
 const VOLUME_STEP = 0.1;
 const PLAYBACK_RATES = [0.5, 0.75, 1, 1.25, 1.5, 2];
+// Short stalls resolve on their own; only show the spinner when waiting is noticeable.
+const BUFFERING_INDICATOR_DELAY_MS = 400;
 
 // Kept across videos (the player remounts per video) for the lifetime of the window.
 const sessionAudio = { volume: 1, isMuted: false };
@@ -42,6 +47,9 @@ export function VideoPlayer({ video, onPrevious, onNext, onEnded }: VideoPlayerP
     isFullscreen: false,
   });
   const [hasPlaybackError, setHasPlaybackError] = useState(false);
+  const [isBuffering, setIsBuffering] = useState(true);
+  const isBufferingIndicatorShown = useDelayedFlag(isBuffering && !hasPlaybackError, BUFFERING_INDICATOR_DELAY_MS);
+  const message = useMessage().player;
   const { areControlsVisible, revealControls } = useAutoHideControls(state.isPlaying);
   usePlaybackProgress(videoRef, video, setting.resumePlayback);
 
@@ -127,6 +135,9 @@ export function VideoPlayer({ video, onPrevious, onNext, onEnded }: VideoPlayerP
         onDoubleClick={commands.toggleFullscreen}
         onPlay={() => updateState({ isPlaying: true })}
         onPause={() => updateState({ isPlaying: false })}
+        onWaiting={() => setIsBuffering(true)}
+        onCanPlay={() => setIsBuffering(false)}
+        onPlaying={() => setIsBuffering(false)}
         onTimeUpdate={event => updateState({ currentTime: event.currentTarget.currentTime })}
         onDurationChange={event => updateState({ duration: Number.isFinite(event.currentTarget.duration) ? event.currentTarget.duration : 0 })}
         onEnded={onEnded}
@@ -135,11 +146,17 @@ export function VideoPlayer({ video, onPrevious, onNext, onEnded }: VideoPlayerP
           log('warn', 'Player', `Cannot play video ${video.id}: media error code ${event.currentTarget.error?.code ?? 'unknown'}`);
         }}
       />
+      {isBufferingIndicatorShown && (
+        <div role="status" className="pointer-events-none absolute inset-0 flex animate-overlay-in flex-col items-center justify-center gap-2 text-white/85">
+          <Spinner layoutClassName="size-8" />
+          <span className="text-meta">{message.loading}</span>
+        </div>
+      )}
       {hasPlaybackError && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-center text-white/85">
-          <CircleAlert className="size-8" strokeWidth={1.5} />
-          <p className="text-sm">无法播放此视频</p>
-          <p className="text-xs text-white/55">文件可能已被移动，或使用了不受支持的编码格式</p>
+        <div role="alert" className="absolute inset-0 flex animate-fade-in flex-col items-center justify-center gap-2 px-6 text-center text-white/85">
+          <CircleAlert aria-hidden className="size-8" strokeWidth={1.5} />
+          <p className="text-body">{message.playbackError}</p>
+          <p className="text-meta text-white/55">{message.playbackErrorHint}</p>
         </div>
       )}
       <PlayerControls state={state} commands={commands} isVisible={areControlsVisible} />

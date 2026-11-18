@@ -1,67 +1,101 @@
 import type { ReactNode } from 'react';
-import type { ThemePreference } from '../../shared/contract/mudio-contract';
+import { THEME_PREFERENCES, type Language } from '../../shared/contract/mudio-contract';
+import { SURFACE_CLASS } from '../../shared/ui/control-class';
 import { PageHeader } from '../../shared/ui/page-header';
 import { SegmentedControl } from '../../shared/ui/segmented-control';
 import { Switch } from '../../shared/ui/switch';
+import { TEXT_CLASS } from '../../shared/ui/text-class';
 import { useSetting } from './setting-context';
+import { useMessage } from './use-message';
 
-const THEME_OPTIONS: readonly { value: ThemePreference; label: string }[] = [
-  { value: 'system', label: '跟随系统' },
-  { value: 'light', label: '浅色' },
-  { value: 'dark', label: '深色' },
+// Each language is labeled in itself so users can find theirs regardless of the current language.
+const LANGUAGE_OPTIONS: readonly { value: Language; label: string }[] = [
+  { value: 'zh-CN', label: '简体中文' },
+  { value: 'en', label: 'English' },
 ];
 
-function SettingGroup({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <section className="space-y-2">
-      <h2 className="px-1 text-xs font-medium text-muted-foreground">{title}</h2>
-      <div className="divide-y divide-border rounded-xl border border-border">{children}</div>
-    </section>
-  );
-}
+export type SettingCategory = 'appearance' | 'playback' | 'language';
 
 function SettingRow({ title, description, children }: { title: string; description: string; children: ReactNode }) {
   return (
-    <div className="flex items-center justify-between gap-6 px-4 py-3.5">
+    <div className="flex items-center justify-between gap-6 px-5 py-4">
       <div className="min-w-0">
-        <p className="text-sm font-medium">{title}</p>
-        <p className="mt-0.5 text-xs text-muted-foreground">{description}</p>
+        <p className={TEXT_CLASS.label}>{title}</p>
+        <p className={`mt-1 ${TEXT_CLASS.meta}`}>{description}</p>
       </div>
       {children}
     </div>
   );
 }
 
-export function SettingPanel() {
+function AppearanceSetting() {
   const { setting, updateSetting } = useSetting();
+  const message = useMessage().setting;
+  const themeOptions = THEME_PREFERENCES.map(theme => ({ value: theme, label: message.themeOption[theme] }));
 
   return (
-    <div className="flex h-full flex-col">
-      <PageHeader title="设置" />
-      <div className="flex-1 overflow-y-auto">
-        <div className="mx-auto max-w-2xl space-y-8 px-6 py-8">
-          <SettingGroup title="外观">
-            <SettingRow title="主题" description="选择界面的配色方案">
-              <SegmentedControl options={THEME_OPTIONS} value={setting.theme} onValueChange={theme => updateSetting({ theme })} />
-            </SettingRow>
-          </SettingGroup>
-          <SettingGroup title="播放">
-            <SettingRow title="自动播放下一个" description="当前视频结束后播放列表中的下一个视频">
-              <Switch
-                label="自动播放下一个"
-                checked={setting.autoplayNext}
-                onCheckedChange={autoplayNext => updateSetting({ autoplayNext })}
-              />
-            </SettingRow>
-            <SettingRow title="记住播放进度" description="再次打开视频时从上次的位置继续">
-              <Switch
-                label="记住播放进度"
-                checked={setting.resumePlayback}
-                onCheckedChange={resumePlayback => updateSetting({ resumePlayback })}
-              />
-            </SettingRow>
-          </SettingGroup>
-        </div>
+    <SettingRow title={message.theme} description={message.themeDescription}>
+      <SegmentedControl label={message.theme} options={themeOptions} value={setting.theme} onValueChange={theme => updateSetting({ theme })} />
+    </SettingRow>
+  );
+}
+
+function PlaybackSetting() {
+  const { setting, updateSetting } = useSetting();
+  const message = useMessage().setting;
+
+  return (
+    <>
+      <SettingRow title={message.autoplayNext} description={message.autoplayNextDescription}>
+        <Switch
+          label={message.autoplayNext}
+          checked={setting.autoplayNext}
+          onCheckedChange={autoplayNext => updateSetting({ autoplayNext })}
+        />
+      </SettingRow>
+      <SettingRow title={message.resumePlayback} description={message.resumePlaybackDescription}>
+        <Switch
+          label={message.resumePlayback}
+          checked={setting.resumePlayback}
+          onCheckedChange={resumePlayback => updateSetting({ resumePlayback })}
+        />
+      </SettingRow>
+    </>
+  );
+}
+
+function LanguageSetting() {
+  const { setting, updateSetting } = useSetting();
+  const message = useMessage().setting;
+
+  return (
+    <SettingRow title={message.language} description={message.languageDescription}>
+      <SegmentedControl
+        label={message.language}
+        options={LANGUAGE_OPTIONS}
+        value={setting.language}
+        onValueChange={language => updateSetting({ language })}
+      />
+    </SettingRow>
+  );
+}
+
+const CATEGORY_CONTENT: Record<SettingCategory, () => ReactNode> = {
+  appearance: AppearanceSetting,
+  playback: PlaybackSetting,
+  language: LanguageSetting,
+};
+
+/** Every change saves immediately; there is no submit step. */
+export function SettingPanel({ category }: { category: SettingCategory }) {
+  const categoryLabel = useMessage().setting.category;
+  const CategoryContent = CATEGORY_CONTENT[category];
+
+  return (
+    <div key={category} className="max-w-2xl animate-fade-in">
+      <PageHeader title={categoryLabel[category]} />
+      <div className={`divide-y divide-line ${SURFACE_CLASS}`}>
+        <CategoryContent />
       </div>
     </div>
   );
