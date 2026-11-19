@@ -6,6 +6,10 @@ export const FOCUS_RING_CLASS =
 export const INPUT_FOCUS_CLASS =
   'transition-[border-color,box-shadow,background-color] focus-within:border-accent focus-within:bg-surface focus-within:ring-3 focus-within:ring-accent-soft';
 
+/** A text input, or a container that looks like one; callers add height and layout. */
+export const TEXT_FIELD_CLASS =
+  `rounded-control border border-transparent bg-sunken px-3 text-control text-foreground outline-none placeholder:text-subtle ${INPUT_FOCUS_CLASS}`;
+
 /** Card / panel shell: content surface, hairline border, resting shadow. */
 export const SURFACE_CLASS = 'rounded-card border border-line bg-surface shadow-rest';
 
@@ -13,9 +17,11 @@ export const SURFACE_CLASS = 'rounded-card border border-line bg-surface shadow-
  * Secondary actions inside a `group` (card, list row): hidden until the group is hovered or focused.
  * Only hidden on hover-capable devices so touch users can always reach them.
  * The opacity transition comes from CONTROL_BASE_CLASS.
+ * NOTE: Revealed on :focus-visible, not focus-within: a clicked card keeps mouse focus after the player
+ * window opens, and focus-within would leave its actions showing until something else is clicked.
  */
 export const HOVER_REVEAL_CLASS =
-  '[@media(hover:hover)]:opacity-0 group-hover:opacity-100 group-focus-within:opacity-100';
+  '[@media(hover:hover)]:opacity-0 group-hover:opacity-100 group-has-[:focus-visible]:opacity-100';
 
 // NOTE: Pressed/expanded state is styled from ARIA attributes so visuals never drift from semantics.
 export const BUTTON_TONE_CLASS = {

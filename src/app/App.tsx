@@ -5,7 +5,7 @@ import { useVideoLibrary, VideoLibraryProvider } from '../feature/library/video-
 import { SettingProvider } from '../feature/setting/setting-context';
 import { useMessage } from '../feature/setting/use-message';
 import { buildRecentQueue, type LibrarySection } from '../feature/library/library-section';
-import type { PlaybackRequest } from '../shared/contract/mudio-contract';
+import type { PlaybackRequest, Playlist } from '../shared/contract/mudio-contract';
 import { HomePage } from '../page/home/home-page';
 import { usePosterBackfill } from '../feature/library/use-poster-backfill';
 import { SettingPage } from '../page/setting/setting-page';
@@ -40,7 +40,14 @@ function AppShell() {
     videoId: openedIds[0],
     playlistIds: buildRecentQueue(latestRecentVideos.current.map(video => video.id), openedIds),
     playlistTitle: recentTitle,
+    playlistId: null,
   }), [recentTitle]);
+  const playPlaylist = useCallback((playlist: Playlist, startVideoId: string) => play({
+    videoId: startVideoId,
+    playlistIds: playlist.videoIds,
+    playlistTitle: playlist.title,
+    playlistId: playlist.id,
+  }), []);
   const playVideo = useCallback((videoId: string) => playInRecent([videoId]), [playInRecent]);
 
   useExternalOpen(playVideo);
@@ -53,6 +60,7 @@ function AppShell() {
           onSectionChange={section => setRoute({ page: 'home', section })}
           onOpenSetting={() => setRoute({ page: 'setting', returnSection: route.section })}
           onPlay={playVideo}
+          onPlayPlaylist={playPlaylist}
         />
       )}
       {route.page === 'setting' && (

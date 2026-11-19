@@ -1,10 +1,10 @@
-import { Repeat, Repeat1, type LucideIcon } from 'lucide-react';
+import { Repeat, Repeat1, Trash2, type LucideIcon } from 'lucide-react';
 import { memo, useEffect, useRef, type Ref } from 'react';
 import type { PlaybackOrder, VideoEntry } from '../../shared/contract/mudio-contract';
 import { IconButton } from '../../shared/ui/button';
 import { SortableItem, SortableScope } from '../../shared/ui/sortable';
 import { cn } from '../../shared/lib/cn';
-import { FOCUS_RING_CLASS } from '../../shared/ui/control-class';
+import { FOCUS_RING_CLASS, HOVER_REVEAL_CLASS } from '../../shared/ui/control-class';
 import { TEXT_CLASS } from '../../shared/ui/text-class';
 import { describeVideoFile } from '../library/video-file-meta';
 import { VideoThumbnail } from '../library/video-thumbnail';
@@ -48,13 +48,17 @@ interface PlaylistItemProps {
   isCurrent: boolean;
   isPlaying: boolean;
   onSelect: (videoId: string) => void;
+  /** Must be stable across renders, or every row re-renders on each video switch. */
+  onRemove?: (videoId: string) => void;
   ref?: Ref<HTMLButtonElement>;
 }
 
-const PlaylistItem = memo(function PlaylistItem({ video, isCurrent, isPlaying, onSelect, ref }: PlaylistItemProps) {
-  const message = useMessage().player;
+const PlaylistItem = memo(function PlaylistItem({ video, isCurrent, isPlaying, onSelect, onRemove, ref }: PlaylistItemProps) {
+  const message = useMessage();
+  // The playing video cannot be removed from under the player.
+  const canRemove = onRemove !== undefined && !isCurrent;
   return (
-    <SortableItem id={video.id}>
+    <SortableItem id={video.id} layoutClassName="group relative">
       <button
         ref={ref}
         type="button"
@@ -69,17 +73,30 @@ const PlaylistItem = memo(function PlaylistItem({ video, isCurrent, isPlaying, o
           <VideoThumbnail video={video} />
           {isCurrent && (
             <div className="absolute inset-0 flex items-center justify-center rounded-control bg-black/55">
-              <NowPlayingBars isPlaying={isPlaying} label={message.nowPlaying} />
+              <NowPlayingBars isPlaying={isPlaying} label={message.player.nowPlaying} />
             </div>
           )}
         </div>
-        <div className="min-w-0 flex-1 py-0.5">
+        {/* Right padding keeps the meta line clear of the delete button in the corner. */}
+        <div className={cn('min-w-0 flex-1 py-0.5', canRemove && 'pr-7')}>
           <p className="line-clamp-2 wrap-anywhere text-control font-medium text-secondary transition-colors group-hover:text-foreground group-aria-current:text-foreground">
             {video.title}
           </p>
           <p className={cn('mt-1 truncate', TEXT_CLASS.hint)}>{describeVideoFile(video)}</p>
         </div>
       </button>
+      {/* A sibling of the row button, not inside it: buttons cannot nest. */}
+      {canRemove && (
+        <IconButton
+          size="sm"
+          tone="quietDanger"
+          label={message.library.removeFromRecent}
+          layoutClassName={cn('absolute bottom-1.5 right-1.5', HOVER_REVEAL_CLASS)}
+          onClick={() => onRemove(video.id)}
+        >
+          <Trash2 />
+        </IconButton>
+      )}
     </SortableItem>
   );
 });
@@ -92,13 +109,15 @@ interface PlaylistPanelProps {
   onSelect: (videoId: string) => void;
   /** Called after a row is long-press dragged onto another; the moved row takes the target's slot. */
   onMove: (movedId: string, targetId: string) => void;
+  /** Only a Recent queue passes this: it forgets the playback record, never the video or its file. */
+  onRemove?: (videoId: string) => void;
 }
 
 /**
  * Always-visible sidebar beside the video, spanning the full height below the title bar.
  * Width tracks the window instead of jumping at breakpoints, and thumbnails scale with it.
  */
-export function PlaylistPanel({ title, videos, currentVideoId, isCurrentPlaying, onSelect, onMove }: PlaylistPanelProps) {
+export function PlaylistPanel({ title, videos, currentVideoId, isCurrentPlaying, onSelect, onMove, onRemove }: PlaylistPanelProps) {
   const message = useMessage();
   const currentItemRef = useRef<HTMLButtonElement>(null);
   const currentIndex = videos.findIndex(video => video.id === currentVideoId);
@@ -134,6 +153,7 @@ export function PlaylistPanel({ title, videos, currentVideoId, isCurrentPlaying,
                 // Only the current row shows playback state; the rest stay untouched on play/pause.
                 isPlaying={isCurrent && isCurrentPlaying}
                 onSelect={onSelect}
+                onRemove={onRemove}
               />
             );
           })}

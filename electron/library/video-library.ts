@@ -1,27 +1,34 @@
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { mkdir, readdir, rm, stat, writeFile } from 'node:fs/promises';
-import { basename, extname, isAbsolute, join, relative, resolve } from 'node:path';
+import { extname, isAbsolute, join, relative, resolve } from 'node:path';
 import {
   FOLDER_SCAN_MAX_DEPTH,
   SUPPORTED_VIDEO_EXTENSIONS,
   type LibrarySnapshot,
+  type Playlist,
+  type VideoEdit,
   type VideoEntry,
 } from '../../src/shared/contract/mudio-contract';
 import { arrangeIds } from '../../src/shared/lib/order';
 import { describeError, log } from '../log/logger';
 import { JsonFile } from '../shared/json-file';
+import { fileNameTitle, readVideoTitle } from './video-title';
 
 const LIBRARY_FILE_NAME = 'library.json';
 const THUMBNAIL_DIRECTORY_NAME = 'thumbnail';
+/** 2: titles come from embedded metadata. Version 1 titled every video by its file name. */
+const LIBRARY_DOCUMENT_VERSION = 2;
 
 interface LibraryDocument {
-  version: 1;
+  version: 1 | typeof LIBRARY_DOCUMENT_VERSION;
   /** Stored in library order. */
   videos: VideoEntry[];
   /** Absent in documents written before library folders existed. */
   folders?: string[];
   /** Absent in documents written before Recent could be arranged. */
   recentIds?: string[];
+  /** Absent in documents written before playlists existed. */
+  playlists?: Playlist[];
 }
 
 /** Recent's order before the user could arrange it: most recently played first. */
@@ -83,6 +90,23 @@ async function isFileGone(filePath: string): Promise<boolean> {
   }
 }
 
+/** Puts the video in exactly the titled playlists, creating missing ones and dropping any left empty. */
+function assignToPlaylists(playlists: Playlist[], videoId: string, playlistTitles: string[]): Playlist[] {
+  const wantedTitles = new Set(playlistTitles);
+  const reassigned = playlists.map(playlist => {
+    const isMember = playlist.videoIds.includes(videoId);
+    const shouldBeMember = wantedTitles.has(playlist.title);
+    if (isMember === shouldBeMember) return playlist;
+    const videoIds = shouldBeMember ? [...playlist.videoIds, videoId] : playlist.videoIds.filter(id => id !== videoId);
+    return { ...playlist, videoIds };
+  });
+  const existingTitles = new Set(playlists.map(playlist => playlist.title));
+  const created = [...wantedTitles]
+    .filter(title => !existingTitles.has(title))
+    .map(title => ({ id: randomUUID(), title, videoIds: [videoId] }));
+  return [...reassigned, ...created].filter(playlist => playlist.videoIds.length > 0);
+}
+
 async function expandToVideoFiles(inputPath: string): Promise<string[]> {
   const absolutePath = resolve(inputPath);
   try {
@@ -105,23 +129,34 @@ export class VideoLibrary {
     private folders: string[],
     /** Always a subset of the video ids. */
     private recentIds: string[],
+    /** Never empty; their video ids are always a subset of the library's. */
+    private playlists: Playlist[],
     private readonly onChange: (snapshot: LibrarySnapshot) => void,
   ) {}
 
   static async open(dataDirectory: string, onChange: (snapshot: LibrarySnapshot) => void): Promise<VideoLibrary> {
     const document = new JsonFile<LibraryDocument>(join(dataDirectory, LIBRARY_FILE_NAME));
-    const { videos, folders = [], recentIds } = await document.read({ version: 1, videos: [] });
+    const { version, videos, folders = [], recentIds, playlists = [] } =
+      await document.read({ version: LIBRARY_DOCUMENT_VERSION, videos: [] });
     const thumbnailDirectory = join(dataDirectory, THUMBNAIL_DIRECTORY_NAME);
     await mkdir(thumbnailDirectory, { recursive: true });
     log('info', 'Library', `Loaded ${videos.length} videos from ${folders.length} library folders`);
     const videoById = new Map(videos.map(video => [video.id, video]));
     // A hand-edited document may list ids twice or name removed videos.
     const validRecentIds = recentIds ? [...new Set(recentIds)].filter(id => videoById.has(id)) : recentIdsByPlayTime(videos);
-    return new VideoLibrary(document, thumbnailDirectory, videoById, folders, validRecentIds, onChange);
+    const validPlaylists = playlists
+      .map(playlist => ({ ...playlist, videoIds: [...new Set(playlist.videoIds)].filter(id => videoById.has(id)) }))
+      .filter(playlist => playlist.videoIds.length > 0);
+    const library = new VideoLibrary(document, thumbnailDirectory, videoById, folders, validRecentIds, validPlaylists, onChange);
+    if (version < LIBRARY_DOCUMENT_VERSION) {
+      library.adoptEmbeddedTitles()
+        .catch(error => log('error', 'Library', `Embedded title migration failed: ${describeError(error)}`));
+    }
+    return library;
   }
 
   snapshot(): LibrarySnapshot {
-    return { videos: this.list(), recentIds: this.recentIds };
+    return { videos: this.list(), recentIds: this.recentIds, playlists: this.playlists };
   }
 
   find(videoId: string): VideoEntry | undefined {
@@ -198,7 +233,7 @@ export class VideoLibrary {
       const entry: VideoEntry = {
         id: videoId,
         filePath,
-        title: basename(filePath, extname(filePath)),
+        title: await readVideoTitle(filePath),
         sizeBytes: size,
         addedAt: new Date().toISOString(),
         lastPlayedAt: null,
@@ -239,6 +274,29 @@ export class VideoLibrary {
     await this.commit();
   }
 
+  async arrangePlaylist(playlistId: string, videoIds: string[]): Promise<void> {
+    this.playlists = this.playlists.map(playlist =>
+      playlist.id === playlistId ? { ...playlist, videoIds: arrangeIds(playlist.videoIds, videoIds) } : playlist);
+    log('info', 'Library', `Arranged playlist ${playlistId}`);
+    await this.commit();
+  }
+
+  async editVideo(videoId: string, edit: VideoEdit): Promise<void> {
+    const video = this.videos.get(videoId);
+    if (!video) return;
+    this.videos.set(videoId, { ...video, title: edit.title });
+    this.playlists = assignToPlaylists(this.playlists, videoId, edit.playlistTitles);
+    log('info', 'Library', `Edited video ${videoId}: in ${edit.playlistTitles.length} playlists`);
+    await this.commit();
+  }
+
+  async removeFromRecent(videoId: string): Promise<void> {
+    if (!this.recentIds.includes(videoId)) return;
+    this.recentIds = this.recentIds.filter(id => id !== videoId);
+    log('info', 'Library', `Removed video ${videoId} from Recent`);
+    await this.commit();
+  }
+
   async recordPlayback(videoId: string, positionSec: number): Promise<void> {
     const video = this.videos.get(videoId);
     if (!video) return;
@@ -259,7 +317,27 @@ export class VideoLibrary {
   private async dropVideos(videoIds: string[]): Promise<void> {
     for (const videoId of videoIds) this.videos.delete(videoId);
     this.recentIds = this.recentIds.filter(videoId => this.videos.has(videoId));
+    this.playlists = this.playlists
+      .map(playlist => ({ ...playlist, videoIds: playlist.videoIds.filter(videoId => this.videos.has(videoId)) }))
+      .filter(playlist => playlist.videoIds.length > 0);
     await Promise.all(videoIds.map(videoId => rm(this.thumbnailPath(videoId), { force: true })));
+  }
+
+  /**
+   * Runs once, in the background, on a version 1 document. Files are probed one at a time to keep
+   * file handles bounded on large libraries; a title the user already changed is left alone.
+   */
+  private async adoptEmbeddedTitles(): Promise<void> {
+    let adoptedCount = 0;
+    for (const { id, filePath } of this.list()) {
+      const title = await readVideoTitle(filePath);
+      const video = this.videos.get(id);
+      if (!video || video.title !== fileNameTitle(filePath) || title === video.title) continue;
+      this.videos.set(id, { ...video, title });
+      adoptedCount += 1;
+    }
+    log('info', 'Library', `Adopted ${adoptedCount} embedded titles`);
+    await this.commit();
   }
 
   private list(): VideoEntry[] {
@@ -273,6 +351,12 @@ export class VideoLibrary {
   }
 
   private persist(): Promise<void> {
-    return this.document.write({ version: 1, videos: this.list(), folders: this.folders, recentIds: this.recentIds });
+    return this.document.write({
+      version: LIBRARY_DOCUMENT_VERSION,
+      videos: this.list(),
+      folders: this.folders,
+      recentIds: this.recentIds,
+      playlists: this.playlists,
+    });
   }
 }

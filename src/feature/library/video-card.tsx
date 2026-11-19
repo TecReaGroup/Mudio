@@ -1,17 +1,44 @@
-import { Play } from 'lucide-react';
+import { Pencil, Play, Trash2 } from 'lucide-react';
 import { memo } from 'react';
 import type { VideoEntry } from '../../shared/contract/mudio-contract';
+import { IconButton } from '../../shared/ui/button';
+import { HOVER_REVEAL_CLASS } from '../../shared/ui/control-class';
+import { useMessage } from '../setting/use-message';
 import { CardCaption } from './card-caption';
 import { describeVideoFile } from './video-file-meta';
 import { VideoThumbnail } from './video-thumbnail';
 
 interface VideoCardProps {
   video: VideoEntry;
-  /** Must be stable across renders, or memoization is lost for the whole grid. */
+  /** Callbacks must be stable across renders, or memoization is lost for the whole grid. */
   onPlay: (videoId: string) => void;
+  onEdit: (videoId: string) => void;
+  /** Only Recent passes this: it forgets the playback record, never the video or its file. */
+  onRemoveFromRecent?: (videoId: string) => void;
 }
 
-export const VideoCard = memo(function VideoCard({ video, onPlay }: VideoCardProps) {
+export const VideoCard = memo(function VideoCard({ video, onPlay, onEdit, onRemoveFromRecent }: VideoCardProps) {
+  const libraryMessage = useMessage().library;
+
+  const actions = (
+    <>
+      <IconButton size="md" label={libraryMessage.edit.action} layoutClassName={HOVER_REVEAL_CLASS} onClick={() => onEdit(video.id)}>
+        <Pencil />
+      </IconButton>
+      {onRemoveFromRecent && (
+        <IconButton
+          size="md"
+          tone="quietDanger"
+          label={libraryMessage.removeFromRecent}
+          layoutClassName={HOVER_REVEAL_CLASS}
+          onClick={() => onRemoveFromRecent(video.id)}
+        >
+          <Trash2 />
+        </IconButton>
+      )}
+    </>
+  );
+
   return (
     <article className="group relative">
       <div className="relative">
@@ -25,7 +52,13 @@ export const VideoCard = memo(function VideoCard({ video, onPlay }: VideoCardPro
           </span>
         </div>
       </div>
-      <CardCaption title={video.title} meta={describeVideoFile(video)} tooltip={video.filePath} onActivate={() => onPlay(video.id)} />
+      <CardCaption
+        title={video.title}
+        meta={describeVideoFile(video)}
+        tooltip={video.filePath}
+        onActivate={() => onPlay(video.id)}
+        actions={actions}
+      />
     </article>
   );
 });

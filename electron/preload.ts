@@ -17,6 +17,9 @@ const mudioApi: MudioApi = {
     remove: videoId => ipcRenderer.invoke(IPC_CHANNEL.libraryRemove, videoId),
     arrange: videoIds => ipcRenderer.invoke(IPC_CHANNEL.libraryArrange, videoIds),
     arrangeRecent: videoIds => ipcRenderer.invoke(IPC_CHANNEL.libraryArrangeRecent, videoIds),
+    arrangePlaylist: (playlistId, videoIds) => ipcRenderer.invoke(IPC_CHANNEL.libraryArrangePlaylist, playlistId, videoIds),
+    editVideo: (videoId, edit) => ipcRenderer.invoke(IPC_CHANNEL.libraryEditVideo, videoId, edit),
+    removeFromRecent: videoId => ipcRenderer.invoke(IPC_CHANNEL.libraryRemoveFromRecent, videoId),
     recordPlayback: (videoId, positionSec) => ipcRenderer.invoke(IPC_CHANNEL.libraryRecordPlayback, videoId, positionSec),
     attachPoster: (videoId, jpegBytes, durationSec) =>
       ipcRenderer.invoke(IPC_CHANNEL.libraryAttachPoster, videoId, jpegBytes, durationSec),

@@ -4,6 +4,7 @@ import type { LibrarySection } from '../../feature/library/library-section';
 import { LibraryView } from '../../feature/library/library-view';
 import { PlaylistIndexView } from '../../feature/library/playlist-index-view';
 import { useMessage } from '../../feature/setting/use-message';
+import type { Playlist } from '../../shared/contract/mudio-contract';
 import { BrowseShell } from '../../shared/ui/browse-shell';
 import { IconButton } from '../../shared/ui/button';
 import { INPUT_FOCUS_CLASS } from '../../shared/ui/control-class';
@@ -20,9 +21,10 @@ interface HomePageProps {
   onSectionChange: (section: LibrarySection) => void;
   onOpenSetting: () => void;
   onPlay: (videoId: string) => void;
+  onPlayPlaylist: (playlist: Playlist, startVideoId: string) => void;
 }
 
-export function HomePage({ section, onSectionChange, onOpenSetting, onPlay }: HomePageProps) {
+export function HomePage({ section, onSectionChange, onOpenSetting, onPlay, onPlayPlaylist }: HomePageProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const searchInputRef = useRef<HTMLInputElement>(null);
   const message = useMessage();
@@ -75,7 +77,7 @@ export function HomePage({ section, onSectionChange, onOpenSetting, onPlay }: Ho
       )}
     >
       {section === 'playlist' ? (
-        <PlaylistIndexView />
+        <PlaylistIndexView onPlayPlaylist={onPlayPlaylist} />
       ) : (
         <LibraryView
           collection={section}

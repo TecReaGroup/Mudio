@@ -1,9 +1,21 @@
 import { BrowserWindow, dialog, ipcMain, type IpcMainInvokeEvent, type OpenDialogOptions } from 'electron';
-import { IPC_CHANNEL, SUPPORTED_VIDEO_EXTENSIONS } from '../../src/shared/contract/mudio-contract';
+import { IPC_CHANNEL, SUPPORTED_VIDEO_EXTENSIONS, type VideoEdit } from '../../src/shared/contract/mudio-contract';
 import { MESSAGES } from '../../src/shared/i18n/message';
-import { expectBytes, expectNonNegativeNumber, expectString, expectStringArray } from '../shared/ipc-payload';
+import { expectBytes, expectNonNegativeNumber, expectString, expectStringArray, expectText } from '../shared/ipc-payload';
 import type { SettingStore } from '../setting/setting-store';
 import type { VideoLibrary } from './video-library';
+
+/** Playlist titles come back trimmed, non-blank and unique, so the library can match them as-is. */
+function parseVideoEdit(value: unknown): VideoEdit {
+  const candidate = value as Partial<VideoEdit> | null;
+  const playlistTitles = expectStringArray(candidate?.playlistTitles, 'playlistTitles')
+    .map(title => title.trim())
+    .filter(title => title.length > 0);
+  return {
+    title: expectText(candidate?.title, 'title'),
+    playlistTitles: [...new Set(playlistTitles)],
+  };
+}
 
 function showOpenDialogFor(event: IpcMainInvokeEvent, options: OpenDialogOptions) {
   const owner = BrowserWindow.fromWebContents(event.sender);
@@ -53,6 +65,15 @@ export function registerLibraryIpc(library: VideoLibrary, settingStore: SettingS
 
   ipcMain.handle(IPC_CHANNEL.libraryArrangeRecent, (_event, videoIds: unknown) =>
     library.arrangeRecent(expectStringArray(videoIds, 'videoIds')));
+
+  ipcMain.handle(IPC_CHANNEL.libraryArrangePlaylist, (_event, playlistId: unknown, videoIds: unknown) =>
+    library.arrangePlaylist(expectString(playlistId, 'playlistId'), expectStringArray(videoIds, 'videoIds')));
+
+  ipcMain.handle(IPC_CHANNEL.libraryEditVideo, (_event, videoId: unknown, edit: unknown) =>
+    library.editVideo(expectString(videoId, 'videoId'), parseVideoEdit(edit)));
+
+  ipcMain.handle(IPC_CHANNEL.libraryRemoveFromRecent, (_event, videoId: unknown) =>
+    library.removeFromRecent(expectString(videoId, 'videoId')));
 
   ipcMain.handle(IPC_CHANNEL.libraryRecordPlayback, (_event, videoId: unknown, positionSec: unknown) =>
     library.recordPlayback(expectString(videoId, 'videoId'), expectNonNegativeNumber(positionSec, 'positionSec')));

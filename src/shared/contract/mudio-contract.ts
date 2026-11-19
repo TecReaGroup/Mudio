@@ -28,11 +28,27 @@ export interface VideoEntry {
   hasThumbnail: boolean;
 }
 
+/** A named group of videos. Exists only while it holds at least one video. */
+export interface Playlist {
+  id: string;
+  /** Unique across playlists; videos are assigned to playlists by title. */
+  title: string;
+  /** In playlist order; a newly added video is appended. */
+  videoIds: string[];
+}
+
 export interface LibrarySnapshot {
   /** In the order the user arranged; newly imported videos are appended. */
   videos: VideoEntry[];
   /** Played videos in Recent's order, which the user arranges too; a first play is appended. */
   recentIds: string[];
+  playlists: Playlist[];
+}
+
+export interface VideoEdit {
+  title: string;
+  /** Every playlist the video should be in; titles no playlist has yet create one. */
+  playlistTitles: string[];
 }
 
 export const LANGUAGES =['zh-CN', 'en'] as const;
@@ -57,6 +73,8 @@ export interface PlaybackRequest {
   playlistIds: string[];
   /** Resolved by the sender, which knows what the queue is: Recent, or the playlist it was started from. */
   playlistTitle: string;
+  /** The playlist the queue was started from, or null for Recent; reordering the queue saves back to it. */
+  playlistId: string | null;
 }
 
 export const LOG_LEVELS = ['debug', 'info', 'warn', 'error'] as const;
@@ -70,6 +88,9 @@ export const IPC_CHANNEL = {
   libraryRemove: 'library:remove',
   libraryArrange: 'library:arrange',
   libraryArrangeRecent: 'library:arrange-recent',
+  libraryArrangePlaylist: 'library:arrange-playlist',
+  libraryEditVideo: 'library:edit-video',
+  libraryRemoveFromRecent: 'library:remove-from-recent',
   libraryRecordPlayback: 'library:record-playback',
   libraryAttachPoster: 'library:attach-poster',
   libraryChanged: 'library:changed',
@@ -107,6 +128,12 @@ export interface MudioApi {
     arrange(videoIds: string[]): Promise<void>;
     /** Saves Recent's order; ids of videos never played are ignored. */
     arrangeRecent(videoIds: string[]): Promise<void>;
+    /** Saves a playlist's order; ids of videos not in it are ignored. */
+    arrangePlaylist(playlistId: string, videoIds: string[]): Promise<void>;
+    /** Renames the video and sets exactly which playlists hold it; playlists left empty are removed. */
+    editVideo(videoId: string, edit: VideoEdit): Promise<void>;
+    /** Forgets the playback record only; the video stays in the library and its file is untouched. */
+    removeFromRecent(videoId: string): Promise<void>;
     recordPlayback(videoId: string, positionSec: number): Promise<void>;
     attachPoster(videoId: string, jpegBytes: Uint8Array, durationSec: number | null): Promise<void>;
     onChanged(listener: (snapshot: LibrarySnapshot) => void): Unsubscribe;

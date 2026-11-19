@@ -7,7 +7,7 @@ import type { PlaybackRequest } from '../shared/contract/mudio-contract';
 import { moveItem } from '../shared/lib/order';
 
 function PlayerShell() {
-  const { arrangeRecent } = useVideoLibrary();
+  const { arrangeRecent, arrangePlaylist, removeFromRecent } = useVideoLibrary();
   const [request, setRequest] = useState<PlaybackRequest | null>(null);
   usePlaybackRequest(setRequest);
   // Stable, so memoized playlist rows do not all re-render on every video switch.
@@ -15,14 +15,20 @@ function PlayerShell() {
     (videoId: string) => setRequest(current => current && { ...current, videoId }),
     [],
   );
+  // The queue is a snapshot, so it drops the row itself; Recent in the library updates from main's push.
+  const removeFromRecentQueue = useCallback((videoId: string) => {
+    setRequest(current => current && { ...current, playlistIds: current.playlistIds.filter(id => id !== videoId) });
+    removeFromRecent(videoId);
+  }, [removeFromRecent]);
 
   if (!request) return null;
 
-  // NOTE: Every queue is Recent until user playlists exist, so its order is saved back as Recent's.
+  // The queue's order is saved back to where it came from: its playlist, or Recent.
   const moveVideo = (movedId: string, targetId: string) => {
     const playlistIds = moveItem(request.playlistIds, movedId, targetId);
     setRequest({ ...request, playlistIds });
-    arrangeRecent(playlistIds);
+    if (request.playlistId === null) arrangeRecent(playlistIds);
+    else arrangePlaylist(request.playlistId, playlistIds);
   };
 
   return (
@@ -32,6 +38,7 @@ function PlayerShell() {
       playlistTitle={request.playlistTitle}
       onSelectVideo={selectVideo}
       onMoveVideo={moveVideo}
+      onRemoveVideo={request.playlistId === null ? removeFromRecentQueue : undefined}
     />
   );
 }

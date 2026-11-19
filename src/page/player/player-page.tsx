@@ -14,10 +14,12 @@ interface PlayerPageProps {
   playlistTitle: string;
   onSelectVideo: (videoId: string) => void;
   onMoveVideo: (movedId: string, targetId: string) => void;
+  /** Only a Recent queue passes this. */
+  onRemoveVideo?: (videoId: string) => void;
 }
 
 /** Fills the player window: the root never scrolls; only the playlist panel does. */
-export function PlayerPage({ videoId, playlistIds, playlistTitle, onSelectVideo, onMoveVideo }: PlayerPageProps) {
+export function PlayerPage({ videoId, playlistIds, playlistTitle, onSelectVideo, onMoveVideo, onRemoveVideo }: PlayerPageProps) {
   const { findVideo } = useVideoLibrary();
   const { setting } = useSetting();
   const video = findVideo(videoId);
@@ -67,6 +69,7 @@ export function PlayerPage({ videoId, playlistIds, playlistTitle, onSelectVideo,
           isCurrentPlaying={playingVideoId === videoId}
           onSelect={onSelectVideo}
           onMove={onMoveVideo}
+          onRemove={onRemoveVideo}
         />
       </div>
     </div>
