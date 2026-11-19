@@ -1,16 +1,17 @@
 import { app, BrowserWindow } from 'electron';
-import { IPC_CHANNEL, type VideoEntry } from '../src/shared/contract/mudio-contract';
+import { IPC_CHANNEL } from '../src/shared/contract/mudio-contract';
 import { ExternalFileOpener, registerLaunchIpc, videoPathsFromArgv } from './launch/external-file-opener';
 import { registerLibraryIpc } from './library/library-ipc';
 import { VideoLibrary } from './library/video-library';
 import { registerLogIpc } from './log/log-ipc';
 import { describeError, log } from './log/logger';
 import { handleMediaProtocol, registerMediaScheme } from './media/media-protocol';
+import { PlayerWindow, registerPlayerIpc } from './player/player-window';
 import { registerSettingIpc, SettingStore } from './setting/setting-store';
-import { createMainWindow, registerWindowIpc } from './window/main-window';
+import { createMainWindow } from './window/main-window';
 
-function broadcastLibrary(videos: VideoEntry[]): void {
-  for (const window of BrowserWindow.getAllWindows()) window.webContents.send(IPC_CHANNEL.libraryChanged, videos);
+function broadcast(channel: string, payload: unknown): void {
+  for (const window of BrowserWindow.getAllWindows()) window.webContents.send(channel, payload);
 }
 
 function startApp(): void {
@@ -21,6 +22,12 @@ function startApp(): void {
   const showMainWindow = () => {
     mainWindow = createMainWindow();
     mainWindow.on('closed', () => { mainWindow = null; });
+  };
+
+  const showLibrary = () => {
+    if (!mainWindow) return showMainWindow();
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.focus();
   };
 
   // macOS delivers file-association opens via this event, possibly before "ready".
@@ -44,16 +51,17 @@ function startApp(): void {
     .then(async () => {
       log('info', 'App', `Starting Mudio ${app.getVersion()}`);
       const dataDirectory = app.getPath('userData');
-      const library = await VideoLibrary.open(dataDirectory, broadcastLibrary);
-      const settingStore = await SettingStore.open(dataDirectory);
+      const library = await VideoLibrary.open(dataDirectory, videos => broadcast(IPC_CHANNEL.libraryChanged, videos));
+      // Every window holds its own copy of the settings; a stale copy would overwrite newer changes on save.
+      const settingStore = await SettingStore.open(dataDirectory, setting => broadcast(IPC_CHANNEL.settingChanged, setting));
       opener = new ExternalFileOpener(library, () => mainWindow);
 
       handleMediaProtocol(library);
       registerLibraryIpc(library, settingStore);
       registerSettingIpc(settingStore);
       registerLaunchIpc(opener);
+      registerPlayerIpc(new PlayerWindow(showLibrary));
       registerLogIpc();
-      registerWindowIpc();
 
       await opener.open(earlyOpenPaths);
       showMainWindow();

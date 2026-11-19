@@ -41,6 +41,7 @@
   --animate-pop-in: pop-in var(--duration-medium) var(--ease-standard) both;
   --animate-panel-in: panel-in var(--duration-long) var(--ease-standard) both;
   --animate-overlay-in: overlay-in var(--duration-medium) var(--ease-standard) both;
+  --animate-equalizer: equalizer 900ms ease-in-out infinite;
 
   @keyframes fade-in {
     from { opacity: 0; transform: translateY(4px); }
@@ -55,14 +56,20 @@
   @keyframes overlay-in {
     from { opacity: 0; }
   }
+  @keyframes equalizer {
+    0%, 100% { transform: scaleY(0.3); }
+    50% { transform: scaleY(1); }
+  }
 }
 
 @theme inline {
   --color-canvas: var(--canvas);
   --color-surface: var(--surface);
+  --color-panel: var(--panel);
   --color-sunken: var(--sunken);
   --color-hover: var(--hover);
   --color-line: var(--line);
+  --color-line-subtle: var(--line-subtle);
   --color-line-strong: var(--line-strong);
   --color-foreground: var(--foreground);
   --color-secondary: var(--secondary);
@@ -90,9 +97,11 @@
   /* NOTE: --canvas must match WINDOW_BACKGROUND in electron/window/main-window.ts. */
   --canvas: #e5e4e0;
   --surface: #f1f0ec;
+  --panel: #f1f0ec;
   --sunken: #dad9d4;
   --hover: rgb(29 29 29 / 0.06);
   --line: rgb(111 111 111 / 0.2);
+  --line-subtle: rgb(111 111 111 / 0.12);
   --line-strong: #bfbebe;
   --foreground: #1d1d1d;
   --secondary: #5e5d5a;
@@ -137,9 +146,12 @@
   --canvas: #101010;
   /* Chrome (title bar, playlist) sits one step above the video stage. */
   --surface: #1e2022;
+  /* Side panel sinks below the title bar; colour alone separates them, no border. */
+  --panel: #17181a;
   --sunken: #2a2d30;
   --hover: rgb(255 253 249 / 0.07);
   --line: rgb(255 253 249 / 0.2);
+  --line-subtle: #232527;
   /* Slate is a hairline only, never a fill. */
   --line-strong: rgb(111 135 156 / 0.6);
   --foreground: #fffdf9;

@@ -2,7 +2,6 @@ import { createContext, useContext, useEffect, useMemo, useState, type ReactNode
 import { mudio } from '../../shared/api/mudio';
 import type { VideoEntry } from '../../shared/contract/mudio-contract';
 import { describeError, log } from '../../shared/lib/logger';
-import { usePosterBackfill } from './use-poster-backfill';
 
 interface VideoLibraryContextValue {
   /** Newest first. Mutations go through mudio.library; this list updates from main-process pushes. */
@@ -30,8 +29,6 @@ export function VideoLibraryProvider({ children }: { children: ReactNode }) {
       });
     return unsubscribe;
   }, []);
-
-  usePosterBackfill(videos ?? []);
 
   const contextValue = useMemo(() => {
     const videoById = new Map((videos ?? []).map(video => [video.id, video]));

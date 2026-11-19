@@ -5,25 +5,26 @@ import { useVideoLibrary, VideoLibraryProvider } from '../feature/library/video-
 import { SettingProvider } from '../feature/setting/setting-context';
 import type { LibrarySection } from '../feature/library/library-section';
 import { HomePage } from '../page/home/home-page';
-import { PlayerPage } from '../page/player/player-page';
+import { usePosterBackfill } from '../feature/library/use-poster-backfill';
 import { SettingPage } from '../page/setting/setting-page';
+import { mudio } from '../shared/api/mudio';
+import { describeError, log } from '../shared/lib/logger';
 
 type AppRoute =
   | { page: 'home'; section: LibrarySection }
-  | { page: 'setting'; returnSection: LibrarySection }
-  /** playlistIds is snapshotted on entry so the order stays stable while "recent" reshuffles. */
-  | { page: 'player'; videoId: string; playlistIds: string[]; returnSection: LibrarySection };
+  | { page: 'setting'; returnSection: LibrarySection };
+
+function play(videoId: string, playlistIds: string[]): void {
+  mudio.player.open({ videoId, playlistIds })
+    .catch(error => log('error', 'Player', `Failed to open player window: ${describeError(error)}`));
+}
 
 function AppShell() {
   const { videos } = useVideoLibrary();
   const [route, setRoute] = useState<AppRoute>({ page: 'home', section: 'all' });
 
-  const play = (videoId: string, playlistIds: string[]) => setRoute(current => ({
-    page: 'player',
-    videoId,
-    playlistIds,
-    returnSection: current.page === 'home' ? current.section : current.returnSection,
-  }));
+  // Main window only: the player window shares the library and would capture the same posters twice.
+  usePosterBackfill(videos);
 
   // Several opened files form their own playlist; a single file plays ahead of the whole library.
   const playOpened = (openedIds: string[]) => {
@@ -48,14 +49,6 @@ function AppShell() {
       )}
       {route.page === 'setting' && (
         <SettingPage onBack={() => setRoute({ page: 'home', section: route.returnSection })} />
-      )}
-      {route.page === 'player' && (
-        <PlayerPage
-          videoId={route.videoId}
-          playlistIds={route.playlistIds}
-          onSelectVideo={videoId => setRoute({ ...route, videoId })}
-          onBack={() => setRoute({ page: 'home', section: route.returnSection })}
-        />
       )}
     </FileDropZone>
   );

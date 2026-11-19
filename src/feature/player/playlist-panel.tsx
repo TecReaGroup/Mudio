@@ -1,4 +1,4 @@
-import { AudioLines, Repeat, Repeat1, type LucideIcon } from 'lucide-react';
+import { Repeat, Repeat1, type LucideIcon } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 import type { PlaybackOrder, VideoEntry } from '../../shared/contract/mudio-contract';
 import { IconButton } from '../../shared/ui/button';
@@ -10,6 +10,7 @@ import { VideoThumbnail } from '../library/video-thumbnail';
 import { useSetting } from '../setting/setting-context';
 import { useMessage } from '../setting/use-message';
 import { CircleFadingPlay } from './circle-fading-play-icon';
+import { NowPlayingBars } from './now-playing-bars';
 
 const PLAYBACK_ORDER_ICON: Record<PlaybackOrder, LucideIcon> = {
   'play-once': CircleFadingPlay,
@@ -44,11 +45,15 @@ function PlaybackOrderButton() {
 interface PlaylistPanelProps {
   videos: VideoEntry[];
   currentVideoId: string;
+  isCurrentPlaying: boolean;
   onSelect: (videoId: string) => void;
 }
 
-/** Always-visible sidebar beside the video, spanning the full height below the title bar. */
-export function PlaylistPanel({ videos, currentVideoId, onSelect }: PlaylistPanelProps) {
+/**
+ * Always-visible sidebar beside the video, spanning the full height below the title bar.
+ * Width tracks the window instead of jumping at breakpoints, and thumbnails scale with it.
+ */
+export function PlaylistPanel({ videos, currentVideoId, isCurrentPlaying, onSelect }: PlaylistPanelProps) {
   const message = useMessage();
   const currentItemRef = useRef<HTMLButtonElement>(null);
   const currentIndex = videos.findIndex(video => video.id === currentVideoId);
@@ -60,19 +65,19 @@ export function PlaylistPanel({ videos, currentVideoId, onSelect }: PlaylistPane
   return (
     <aside
       aria-label={message.player.playlist}
-      className="flex w-80 shrink-0 flex-col overflow-hidden border-l border-line bg-surface xl:w-96"
+      className="flex w-[clamp(16rem,26vw,26rem)] shrink-0 flex-col overflow-hidden bg-panel"
     >
-      <header className="mx-5 flex shrink-0 items-center justify-between gap-3 border-b border-line pb-4 pt-5">
-        <h2 className={TEXT_CLASS.dialogTitle}>{message.player.playlist}</h2>
-        <div className="flex items-center gap-2">
-          <PlaybackOrderButton />
-          <span className="text-control tabular-nums text-subtle">
-            <span className="font-semibold text-foreground">{currentIndex + 1}</span> / {videos.length}
+      <header className="flex h-14 shrink-0 items-center justify-between gap-3 border-b border-line-subtle pl-4 pr-2">
+        <div className="flex min-w-0 items-baseline gap-2">
+          <h2 className={cn('truncate', TEXT_CLASS.panelTitle)}>{message.player.playlist}</h2>
+          <span className="shrink-0 text-meta tabular-nums text-subtle">
+            {currentIndex + 1} / {videos.length}
           </span>
         </div>
+        <PlaybackOrderButton />
       </header>
-      <ol className="scrollbar-subtle min-h-0 flex-1 space-y-1 overflow-y-auto p-3">
-        {videos.map((video, index) => {
+      <ol className="scrollbar-subtle min-h-0 flex-1 space-y-0.5 overflow-y-auto p-2">
+        {videos.map(video => {
           const isCurrent = video.id === currentVideoId;
           return (
             <li key={video.id}>
@@ -82,19 +87,23 @@ export function PlaylistPanel({ videos, currentVideoId, onSelect }: PlaylistPane
                 aria-current={isCurrent ? 'true' : undefined}
                 onClick={() => onSelect(video.id)}
                 className={cn(
-                  'group flex w-full cursor-pointer items-center gap-3 rounded-card p-2 text-left transition-colors hover:bg-hover aria-[current=true]:bg-sunken aria-[current=true]:ring-1 aria-[current=true]:ring-line-strong',
+                  'group flex w-full cursor-pointer items-start gap-3 rounded-card p-2 text-left transition-colors hover:bg-hover aria-[current=true]:bg-accent-soft',
                   FOCUS_RING_CLASS,
                 )}
               >
-                <span className="flex w-5 shrink-0 justify-center text-meta tabular-nums text-subtle">
-                  {isCurrent
-                    ? <AudioLines aria-label={message.player.nowPlaying} className="size-4 text-accent" strokeWidth={2.25} />
-                    : index + 1}
-                </span>
-                <VideoThumbnail video={video} layoutClassName="w-32 shrink-0 xl:w-36" />
-                <div className="min-w-0 flex-1">
-                  <p className="line-clamp-2 wrap-anywhere text-body font-medium text-foreground">{video.title}</p>
-                  <p className={`mt-1 truncate ${TEXT_CLASS.meta}`}>{describeVideoFile(video)}</p>
+                <div className="relative w-[42%] max-w-40 shrink-0">
+                  <VideoThumbnail video={video} />
+                  {isCurrent && (
+                    <div className="absolute inset-0 flex items-center justify-center rounded-control bg-black/55">
+                      <NowPlayingBars isPlaying={isCurrentPlaying} label={message.player.nowPlaying} />
+                    </div>
+                  )}
+                </div>
+                <div className="min-w-0 flex-1 py-0.5">
+                  <p className="line-clamp-2 wrap-anywhere text-control font-medium text-secondary transition-colors group-hover:text-foreground group-aria-[current=true]:text-foreground">
+                    {video.title}
+                  </p>
+                  <p className={cn('mt-1 truncate', TEXT_CLASS.hint)}>{describeVideoFile(video)}</p>
                 </div>
               </button>
             </li>

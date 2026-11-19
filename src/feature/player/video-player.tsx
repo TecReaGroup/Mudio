@@ -33,11 +33,13 @@ interface VideoPlayerProps {
   /** Native `loop`: the video restarts at its end and `onEnded` never fires. */
   loop: boolean;
   onEnded: () => void;
+  onPlay: () => void;
+  onPause: () => void;
   layoutClassName?: string;
 }
 
 /** Must be keyed by video id: each mount plays exactly one video. */
-export function VideoPlayer({ video, onPrevious, onNext, loop, onEnded, layoutClassName }: VideoPlayerProps) {
+export function VideoPlayer({ video, onPrevious, onNext, loop, onEnded, onPlay, onPause, layoutClassName }: VideoPlayerProps) {
   const { setting } = useSetting();
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -153,8 +155,14 @@ export function VideoPlayer({ video, onPrevious, onNext, loop, onEnded, layoutCl
         className="size-full object-contain"
         {...pressHandlers}
         onDoubleClick={commands.toggleFullscreen}
-        onPlay={() => updateState({ isPlaying: true })}
-        onPause={() => updateState({ isPlaying: false })}
+        onPlay={() => {
+          updateState({ isPlaying: true });
+          onPlay();
+        }}
+        onPause={() => {
+          updateState({ isPlaying: false });
+          onPause();
+        }}
         onWaiting={() => setIsBuffering(true)}
         onCanPlay={() => setIsBuffering(false)}
         onPlaying={() => setIsBuffering(false)}

@@ -28,7 +28,6 @@ const ZH_CN = {
     dropToOpen: '松开以打开视频',
   },
   player: {
-    pageTitle: '视频',
     play: '播放 (空格)',
     pause: '暂停 (空格)',
     progress: '播放进度',
@@ -92,7 +91,6 @@ const EN: Messages = {
     dropToOpen: 'Release to open videos',
   },
   player: {
-    pageTitle: 'Video',
     play: 'Play (Space)',
     pause: 'Pause (Space)',
     progress: 'Playback progress',

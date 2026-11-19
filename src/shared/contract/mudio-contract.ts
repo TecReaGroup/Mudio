@@ -38,8 +38,14 @@ export interface AppSetting {
   resumePlayback: boolean;
 }
 
-export const COLOR_SCHEMES = ['light', 'dark'] as const;
-export type ColorScheme = (typeof COLOR_SCHEMES)[number];
+/** URL hash that boots the renderer into the player window instead of the library. */
+export const PLAYER_VIEW_HASH = 'player';
+
+export interface PlaybackRequest {
+  videoId: string;
+  /** Snapshotted when playback starts so the order stays stable while "recent" reshuffles. */
+  playlistIds: string[];
+}
 
 export const LOG_LEVELS = ['debug', 'info', 'warn', 'error'] as const;
 export type LogLevel = (typeof LOG_LEVELS)[number];
@@ -55,9 +61,13 @@ export const IPC_CHANNEL = {
   libraryChanged: 'library:changed',
   settingLoad: 'setting:load',
   settingSave: 'setting:save',
+  settingChanged: 'setting:changed',
   launchTakePending: 'launch:take-pending',
   launchOpenVideo: 'launch:open-video',
-  windowSetCaptionScheme: 'window:set-caption-scheme',
+  playerOpen: 'player:open',
+  playerTakePending: 'player:take-pending',
+  playerPlay: 'player:play',
+  playerReturnToLibrary: 'player:return-to-library',
   log: 'log:write',
 } as const;
 
@@ -81,15 +91,21 @@ export interface MudioApi {
   setting: {
     load(): Promise<AppSetting>;
     save(setting: AppSetting): Promise<void>;
+    onChanged(listener: (setting: AppSetting) => void): Unsubscribe;
   };
   launch: {
     /** Video the OS asked to open before the renderer was ready, consumed once. */
     takePendingVideoId(): Promise<string | null>;
     onOpenVideo(listener: (videoId: string) => void): Unsubscribe;
   };
-  window: {
-    /** Recolors the native caption buttons to stay legible on the page beneath them; no-op on macOS. */
-    setCaptionScheme(scheme: ColorScheme): void;
+  player: {
+    /** Plays in the player window, opening it if needed. */
+    open(request: PlaybackRequest): Promise<void>;
+    /** Request made before the player window's renderer was ready, consumed once. */
+    takePendingRequest(): Promise<PlaybackRequest | null>;
+    onPlay(listener: (request: PlaybackRequest) => void): Unsubscribe;
+    /** Closes the player window and brings the library window to the front. */
+    returnToLibrary(): void;
   };
   pathForFile(file: File): string;
   log(level: LogLevel, module: string, message: string): void;

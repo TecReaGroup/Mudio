@@ -111,7 +111,7 @@ function PlaybackRateControl({ playbackRate, onSelect }: { playbackRate: number;
   );
 }
 
-const FADE_CLASS = 'absolute inset-x-0 bottom-0 transition-opacity duration-(--duration-medium)';
+const FADE_CLASS = 'absolute inset-x-0 bottom-0 transition-opacity duration-(--duration-long) ease-in-out';
 
 export function PlayerControls({ state, commands, isVisible }: PlayerControlsProps) {
   const message = useMessage().player;

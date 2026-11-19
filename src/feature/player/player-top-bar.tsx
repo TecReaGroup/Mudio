@@ -2,7 +2,7 @@ import type { VideoEntry } from '../../shared/contract/mudio-contract';
 import { cn } from '../../shared/lib/cn';
 import { describeVideoFile } from '../library/video-file-meta';
 
-const FADE_CLASS = 'pointer-events-none absolute inset-x-0 top-0 transition-opacity duration-(--duration-medium)';
+const FADE_CLASS = 'pointer-events-none absolute inset-x-0 top-0 transition-opacity duration-(--duration-long) ease-in-out';
 
 /** Title overlay; shows and hides together with the bottom controls. */
 export function PlayerTopBar({ video, isVisible }: { video: VideoEntry; isVisible: boolean }) {

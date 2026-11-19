@@ -14,9 +14,12 @@ export function SettingProvider({ children }: { children: ReactNode }) {
   const [setting, setSetting] = useState<AppSetting | null>(null);
 
   useEffect(() => {
+    // Another window may change settings; its push is newer than the initial load.
+    const unsubscribe = mudio.setting.onChanged(setSetting);
     mudio.setting.load()
-      .then(setSetting)
+      .then(initialSetting => setSetting(current => current ?? initialSetting))
       .catch(error => log('error', 'Setting', `Failed to load settings: ${describeError(error)}`));
+    return unsubscribe;
   }, []);
 
   const language = setting?.language;

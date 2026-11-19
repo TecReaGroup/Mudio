@@ -23,13 +23,17 @@ const mudioApi: MudioApi = {
   setting: {
     load: () => ipcRenderer.invoke(IPC_CHANNEL.settingLoad),
     save: setting => ipcRenderer.invoke(IPC_CHANNEL.settingSave, setting),
+    onChanged: listener => subscribe(IPC_CHANNEL.settingChanged, listener),
   },
   launch: {
     takePendingVideoId: () => ipcRenderer.invoke(IPC_CHANNEL.launchTakePending),
     onOpenVideo: listener => subscribe(IPC_CHANNEL.launchOpenVideo, listener),
   },
-  window: {
-    setCaptionScheme: scheme => ipcRenderer.send(IPC_CHANNEL.windowSetCaptionScheme, scheme),
+  player: {
+    open: request => ipcRenderer.invoke(IPC_CHANNEL.playerOpen, request),
+    takePendingRequest: () => ipcRenderer.invoke(IPC_CHANNEL.playerTakePending),
+    onPlay: listener => subscribe(IPC_CHANNEL.playerPlay, listener),
+    returnToLibrary: () => ipcRenderer.send(IPC_CHANNEL.playerReturnToLibrary),
   },
   pathForFile: file => webUtils.getPathForFile(file),
   log: (level, module, message) => ipcRenderer.send(IPC_CHANNEL.log, level, module, message),

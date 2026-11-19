@@ -1,26 +1,26 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useVideoLibrary } from '../../feature/library/video-library-context';
 import { PlaylistPanel } from '../../feature/player/playlist-panel';
 import { VideoPlayer } from '../../feature/player/video-player';
 import { useSetting } from '../../feature/setting/setting-context';
-import { useMessage } from '../../feature/setting/use-message';
 import { mudio } from '../../shared/api/mudio';
 import type { VideoEntry } from '../../shared/contract/mudio-contract';
-import { BackTitleBar } from '../../shared/ui/back-title-bar';
+import { BackButton } from '../../shared/ui/back-button';
+import { WindowTitleBar } from '../../shared/ui/window-title-bar';
 
 interface PlayerPageProps {
   videoId: string;
   playlistIds: string[];
   onSelectVideo: (videoId: string) => void;
-  onBack: () => void;
 }
 
-/** Work shell: the root never scrolls; only the playlist panel does. */
-export function PlayerPage({ videoId, playlistIds, onSelectVideo, onBack }: PlayerPageProps) {
+/** Fills the player window: the root never scrolls; only the playlist panel does. */
+export function PlayerPage({ videoId, playlistIds, onSelectVideo }: PlayerPageProps) {
   const { findVideo } = useVideoLibrary();
   const { setting } = useSetting();
-  const message = useMessage();
   const video = findVideo(videoId);
+  // Tracks which video is playing, not a bool: a switched-to video that fails to autoplay must not inherit "playing".
+  const [playingVideoId, setPlayingVideoId] = useState<string | null>(null);
   const playlist = useMemo(
     () => playlistIds.map(findVideo).filter((entry): entry is VideoEntry => entry !== undefined),
     [playlistIds, findVideo],
@@ -29,15 +29,17 @@ export function PlayerPage({ videoId, playlistIds, onSelectVideo, onBack }: Play
   const previousVideo = currentIndex > 0 ? playlist[currentIndex - 1] : undefined;
   const nextVideo = currentIndex >= 0 ? playlist[currentIndex + 1] : undefined;
 
-  // The page is dark, so the native caption buttons must be too while it is shown.
+  // Names the taskbar entry after the video so it is distinguishable from the library window.
+  const windowTitle = video?.title;
   useEffect(() => {
-    mudio.window.setCaptionScheme('dark');
-    return () => mudio.window.setCaptionScheme('light');
-  }, []);
+    if (windowTitle) document.title = windowTitle;
+  }, [windowTitle]);
 
   return (
     <div className="scheme-dark flex h-full flex-col bg-surface text-foreground">
-      <BackTitleBar backLabel={message.common.back} title={message.player.pageTitle} onBack={onBack} />
+      <WindowTitleBar>
+        <BackButton label="Mudio" onBack={mudio.player.returnToLibrary} />
+      </WindowTitleBar>
       <div className="flex min-h-0 flex-1">
         <main className="flex min-w-0 flex-1 bg-canvas">
           {video && (
@@ -48,13 +50,20 @@ export function PlayerPage({ videoId, playlistIds, onSelectVideo, onBack }: Play
               onPrevious={previousVideo && (() => onSelectVideo(previousVideo.id))}
               onNext={nextVideo && (() => onSelectVideo(nextVideo.id))}
               loop={setting.playbackOrder === 'repeat-one'}
+              onPlay={() => setPlayingVideoId(video.id)}
+              onPause={() => setPlayingVideoId(null)}
               onEnded={() => {
                 if (setting.playbackOrder === 'sequential' && nextVideo) onSelectVideo(nextVideo.id);
               }}
             />
           )}
         </main>
-        <PlaylistPanel videos={playlist} currentVideoId={videoId} onSelect={onSelectVideo} />
+        <PlaylistPanel
+          videos={playlist}
+          currentVideoId={videoId}
+          isCurrentPlaying={playingVideoId === videoId}
+          onSelect={onSelectVideo}
+        />
       </div>
     </div>
   );

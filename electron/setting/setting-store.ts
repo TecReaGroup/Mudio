@@ -33,12 +33,16 @@ function parseSetting(value: unknown): AppSetting {
 
 /** Owns persisted user settings. */
 export class SettingStore {
-  private constructor(private readonly document: JsonFile<Partial<AppSetting>>, private setting: AppSetting) {}
+  private constructor(
+    private readonly document: JsonFile<Partial<AppSetting>>,
+    private setting: AppSetting,
+    private readonly onChanged: (setting: AppSetting) => void,
+  ) {}
 
-  static async open(dataDirectory: string): Promise<SettingStore> {
+  static async open(dataDirectory: string, onChanged: (setting: AppSetting) => void): Promise<SettingStore> {
     const document = new JsonFile<Partial<AppSetting>>(join(dataDirectory, SETTING_FILE_NAME));
     const stored = await document.read({});
-    return new SettingStore(document, { ...defaultSetting(), ...stored });
+    return new SettingStore(document, { ...defaultSetting(), ...stored }, onChanged);
   }
 
   current(): AppSetting {
@@ -48,6 +52,7 @@ export class SettingStore {
   async save(setting: AppSetting): Promise<void> {
     this.setting = setting;
     log('info', 'Setting', `Saved language=${setting.language} playbackOrder=${setting.playbackOrder} resumePlayback=${setting.resumePlayback}`);
+    this.onChanged(setting);
     await this.document.write(setting);
   }
 }

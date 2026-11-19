@@ -10,8 +10,6 @@ interface VideoCardProps {
 }
 
 export function VideoCard({ video, onPlay }: VideoCardProps) {
-  const watchedPercent = video.durationSec ? Math.min(100, (video.resumePositionSec / video.durationSec) * 100) : 0;
-
   return (
     <article className="group relative">
       <div className="relative">
@@ -24,11 +22,6 @@ export function VideoCard({ video, onPlay }: VideoCardProps) {
             <Play className="ml-0.5 size-5 fill-current" />
           </span>
         </div>
-        {watchedPercent > 0 && (
-          <div aria-hidden className="absolute inset-x-3 bottom-1 h-0.75 overflow-hidden rounded-full bg-white/30">
-            <div className="h-full bg-accent" style={{ width: `${watchedPercent}%` }} />
-          </div>
-        )}
       </div>
       <CardCaption title={video.title} meta={describeVideoFile(video)} tooltip={video.filePath} onActivate={onPlay} />
     </article>
