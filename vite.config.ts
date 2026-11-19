@@ -6,6 +6,8 @@ import electron from 'vite-plugin-electron/simple';
 export default defineConfig({
   // Relative asset paths so the packaged renderer loads over file://.
   base: './',
+  // NOTE: "localhost" may bind to ::1 only while Electron resolves it to 127.0.0.1 → ERR_CONNECTION_REFUSED, window never shows.
+  server: { host: '127.0.0.1' },
   plugins: [
     react(),
     tailwindcss(),

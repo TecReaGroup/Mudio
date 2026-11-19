@@ -8,6 +8,7 @@ import { Spinner } from '../../shared/ui/feedback';
 import { useSetting } from '../setting/setting-context';
 import { useMessage } from '../setting/use-message';
 import { PlayerControls, type PlaybackState, type PlayerCommands } from './player-controls';
+import { PlayerTopBar } from './player-top-bar';
 import { useAutoHideControls } from './use-auto-hide-controls';
 import { useDelayedFlag } from './use-delayed-flag';
 import { usePlaybackProgress } from './use-playback-progress';
@@ -17,7 +18,6 @@ const VOLUME_STEP = 0.1;
 const PLAYBACK_RATES = [0.5, 0.75, 1, 1.25, 1.5, 2];
 // Short stalls resolve on their own; only show the spinner when waiting is noticeable.
 const BUFFERING_INDICATOR_DELAY_MS = 400;
-
 // Kept across videos (the player remounts per video) for the lifetime of the window.
 const sessionAudio = { volume: 1, isMuted: false };
 
@@ -30,10 +30,11 @@ interface VideoPlayerProps {
   onPrevious?: () => void;
   onNext?: () => void;
   onEnded: () => void;
+  layoutClassName?: string;
 }
 
 /** Must be keyed by video id: each mount plays exactly one video. */
-export function VideoPlayer({ video, onPrevious, onNext, onEnded }: VideoPlayerProps) {
+export function VideoPlayer({ video, onPrevious, onNext, onEnded, layoutClassName }: VideoPlayerProps) {
   const { setting } = useSetting();
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -124,7 +125,12 @@ export function VideoPlayer({ video, onPrevious, onNext, onEnded }: VideoPlayerP
     <div
       ref={containerRef}
       onMouseMove={revealControls}
-      className={cn('relative size-full overflow-hidden bg-black', !areControlsVisible && 'cursor-none')}
+      className={cn(
+        // The caller sizes the stage; object-contain letterboxes any aspect ratio inside it.
+        'relative overflow-hidden bg-black',
+        layoutClassName,
+        !areControlsVisible && 'cursor-none',
+      )}
     >
       <video
         ref={videoRef}
@@ -159,6 +165,7 @@ export function VideoPlayer({ video, onPrevious, onNext, onEnded }: VideoPlayerP
           <p className="text-meta text-white/55">{message.playbackErrorHint}</p>
         </div>
       )}
+      <PlayerTopBar video={video} isVisible={areControlsVisible} />
       <PlayerControls state={state} commands={commands} isVisible={areControlsVisible} />
     </div>
   );

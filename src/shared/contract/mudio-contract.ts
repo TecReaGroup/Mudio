@@ -25,18 +25,17 @@ export interface VideoEntry {
   hasThumbnail: boolean;
 }
 
-export const THEME_PREFERENCES = ['system', 'light', 'dark'] as const;
-export type ThemePreference = (typeof THEME_PREFERENCES)[number];
-
 export const LANGUAGES = ['zh-CN', 'en'] as const;
 export type Language = (typeof LANGUAGES)[number];
 
 export interface AppSetting {
-  theme: ThemePreference;
   language: Language;
   autoplayNext: boolean;
   resumePlayback: boolean;
 }
+
+export const COLOR_SCHEMES = ['light', 'dark'] as const;
+export type ColorScheme = (typeof COLOR_SCHEMES)[number];
 
 export const LOG_LEVELS = ['debug', 'info', 'warn', 'error'] as const;
 export type LogLevel = (typeof LOG_LEVELS)[number];
@@ -54,6 +53,7 @@ export const IPC_CHANNEL = {
   settingSave: 'setting:save',
   launchTakePending: 'launch:take-pending',
   launchOpenVideo: 'launch:open-video',
+  windowSetCaptionScheme: 'window:set-caption-scheme',
   log: 'log:write',
 } as const;
 
@@ -82,6 +82,10 @@ export interface MudioApi {
     /** Video the OS asked to open before the renderer was ready, consumed once. */
     takePendingVideoId(): Promise<string | null>;
     onOpenVideo(listener: (videoId: string) => void): Unsubscribe;
+  };
+  window: {
+    /** Recolors the native caption buttons to stay legible on the page beneath them; no-op on macOS. */
+    setCaptionScheme(scheme: ColorScheme): void;
   };
   pathForFile(file: File): string;
   log(level: LogLevel, module: string, message: string): void;

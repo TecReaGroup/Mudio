@@ -84,9 +84,8 @@
   --font-sans: 'Inter Variable', 'Noto Sans SC Variable', system-ui, sans-serif;
 }
 
-/* Theme follows prefers-color-scheme, which the main process drives via nativeTheme.themeSource. */
 :root {
-  color-scheme: light dark;
+  color-scheme: light;
   /* NOTE: --canvas must match WINDOW_BACKGROUND in electron/window/main-window.ts. */
   --canvas: #faf9f7;
   --surface: #ffffff;
@@ -127,37 +126,40 @@
   --titlebar-inset-end: 144px;
 }
 
+/*
+ * Dark scheme scoped to a subtree (the player page), so the rest of the app stays light.
+ * Elements inside must set their own text color: body's `color` was already resolved from the light tokens.
+ */
+.scheme-dark {
+  color-scheme: dark;
+  --canvas: #1e2022;
+  --surface: #1e2022;
+  --sunken: #2a2d30;
+  --hover: rgb(255 255 255 / 0.06);
+  --line: #2e3135;
+  --line-strong: #42464b;
+  --foreground: #f2f3f5;
+  --secondary: #a3a7ad;
+  --subtle: #6f747b;
+  --inverse: #f2f3f5;
+  --on-inverse: #1e2022;
+  --accent: #7f9ef0;
+  --accent-soft: rgb(127 158 240 / 0.16);
+  --success: #4ade80;
+  --success-soft: rgb(74 222 128 / 0.14);
+  --danger: #f87171;
+  --danger-soft: rgb(248 113 113 / 0.14);
+  --on-danger: #ffffff;
+  --scrollbar-thumb: rgb(255 255 255 / 0.2);
+
+  --shadow-rest-value: 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow-raised-value: 0 6px 16px -4px rgb(0 0 0 / 0.5), 0 2px 4px -2px rgb(0 0 0 / 0.4);
+  --shadow-overlay-value: 0 18px 44px -10px rgb(0 0 0 / 0.6), 0 4px 12px -4px rgb(0 0 0 / 0.4);
+}
+
 :root[data-platform='darwin'] {
   --titlebar-inset-start: 80px;
   --titlebar-inset-end: 0px;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --canvas: #0c0a09;
-    --surface: #161412;
-    --sunken: #1e1b19;
-    --hover: rgb(250 250 249 / 0.07);
-    --line: #292524;
-    --line-strong: #3d3935;
-    --foreground: #fafaf9;
-    --secondary: #a8a29e;
-    --subtle: #78716c;
-    --inverse: #fafaf9;
-    --on-inverse: #1c1917;
-    --accent: #7c9ce8;
-    --accent-soft: rgb(124 156 232 / 0.16);
-    --success: #4ade80;
-    --success-soft: rgb(74 222 128 / 0.14);
-    --danger: #f87171;
-    --danger-soft: rgb(248 113 113 / 0.14);
-    --on-danger: #18181b;
-    --scrollbar-thumb: rgb(255 255 255 / 0.2);
-
-    --shadow-rest-value: 0 1px 2px rgb(0 0 0 / 0.4);
-    --shadow-raised-value: 0 8px 20px -6px rgb(0 0 0 / 0.6), 0 2px 4px -2px rgb(0 0 0 / 0.4);
-    --shadow-overlay-value: 0 20px 48px -10px rgb(0 0 0 / 0.7), 0 4px 12px -4px rgb(0 0 0 / 0.5);
-  }
 }
 
 @utility drag-region {

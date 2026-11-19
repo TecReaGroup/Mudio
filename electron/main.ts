@@ -7,7 +7,7 @@ import { registerLogIpc } from './log/log-ipc';
 import { describeError, log } from './log/logger';
 import { handleMediaProtocol, registerMediaScheme } from './media/media-protocol';
 import { registerSettingIpc, SettingStore } from './setting/setting-store';
-import { createMainWindow } from './window/main-window';
+import { createMainWindow, registerWindowIpc } from './window/main-window';
 
 function broadcastLibrary(videos: VideoEntry[]): void {
   for (const window of BrowserWindow.getAllWindows()) window.webContents.send(IPC_CHANNEL.libraryChanged, videos);
@@ -53,6 +53,7 @@ function startApp(): void {
       registerSettingIpc(settingStore);
       registerLaunchIpc(opener);
       registerLogIpc();
+      registerWindowIpc();
 
       await opener.open(earlyOpenPaths);
       showMainWindow();

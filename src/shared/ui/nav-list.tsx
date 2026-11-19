@@ -4,7 +4,7 @@ import { cn } from '../lib/cn';
 import { FOCUS_RING_CLASS } from './control-class';
 
 const NAV_ITEM_CLASS = cn(
-  'no-drag flex h-9 w-full cursor-pointer items-center gap-3 rounded-control px-3 text-control text-secondary transition-colors',
+  'no-drag flex h-10 w-full cursor-pointer items-center gap-3 rounded-control px-3 text-control text-secondary transition-colors',
   'hover:bg-hover hover:text-foreground',
   'aria-[current=page]:bg-inverse aria-[current=page]:font-medium aria-[current=page]:text-on-inverse',
   FOCUS_RING_CLASS,
@@ -19,7 +19,7 @@ interface NavItemProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'cl
 export function NavItem({ icon: Icon, label, ...props }: NavItemProps) {
   return (
     <button type="button" className={NAV_ITEM_CLASS} {...props}>
-      <Icon aria-hidden className="size-4.5 shrink-0" strokeWidth={1.75} />
+      <Icon aria-hidden className="size-5 shrink-0" strokeWidth={1.75} />
       <span className="min-w-0 flex-1 truncate text-left">{label}</span>
     </button>
   );

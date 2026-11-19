@@ -1,17 +1,12 @@
-import { ListVideo } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useVideoLibrary } from '../../feature/library/video-library-context';
 import { PlaylistPanel } from '../../feature/player/playlist-panel';
 import { VideoPlayer } from '../../feature/player/video-player';
 import { useSetting } from '../../feature/setting/setting-context';
 import { useMessage } from '../../feature/setting/use-message';
+import { mudio } from '../../shared/api/mudio';
 import type { VideoEntry } from '../../shared/contract/mudio-contract';
 import { BackTitleBar } from '../../shared/ui/back-title-bar';
-import { IconButton } from '../../shared/ui/button';
-
-const PLAYLIST_PANEL_ID = 'player-playlist';
-// Below this width the playlist becomes an overlay drawer, so it starts closed there.
-const SIDE_BY_SIDE_QUERY = '(min-width: 1024px)';
 
 interface PlayerPageProps {
   videoId: string;
@@ -25,7 +20,6 @@ export function PlayerPage({ videoId, playlistIds, onSelectVideo, onBack }: Play
   const { findVideo } = useVideoLibrary();
   const { setting } = useSetting();
   const message = useMessage();
-  const [isPlaylistOpen, setIsPlaylistOpen] = useState(() => window.matchMedia(SIDE_BY_SIDE_QUERY).matches);
   const video = findVideo(videoId);
   const playlist = useMemo(
     () => playlistIds.map(findVideo).filter((entry): entry is VideoEntry => entry !== undefined),
@@ -35,28 +29,21 @@ export function PlayerPage({ videoId, playlistIds, onSelectVideo, onBack }: Play
   const previousVideo = currentIndex > 0 ? playlist[currentIndex - 1] : undefined;
   const nextVideo = currentIndex >= 0 ? playlist[currentIndex + 1] : undefined;
 
+  // The page is dark, so the native caption buttons must be too while it is shown.
+  useEffect(() => {
+    mudio.window.setCaptionScheme('dark');
+    return () => mudio.window.setCaptionScheme('light');
+  }, []);
+
   return (
-    <div className="flex h-full flex-col bg-canvas">
-      <BackTitleBar
-        backLabel={message.common.back}
-        title={video?.title}
-        onBack={onBack}
-        actions={(
-          <IconButton
-            label={message.player.playlist}
-            aria-pressed={isPlaylistOpen}
-            aria-controls={PLAYLIST_PANEL_ID}
-            onClick={() => setIsPlaylistOpen(isOpen => !isOpen)}
-          >
-            <ListVideo />
-          </IconButton>
-        )}
-      />
-      <div className="relative flex min-h-0 flex-1 gap-2 px-2 pb-2">
-        <section className="min-w-0 flex-1 overflow-hidden rounded-card bg-black shadow-rest">
+    <div className="scheme-dark flex h-full flex-col bg-canvas text-foreground">
+      <BackTitleBar backLabel={message.common.back} title={message.player.pageTitle} onBack={onBack} />
+      <div className="flex min-h-0 flex-1">
+        <main className="flex min-w-0 flex-1 bg-black">
           {video && (
             <VideoPlayer
               key={video.id}
+              layoutClassName="flex-1"
               video={video}
               onPrevious={previousVideo && (() => onSelectVideo(previousVideo.id))}
               onNext={nextVideo && (() => onSelectVideo(nextVideo.id))}
@@ -65,15 +52,8 @@ export function PlayerPage({ videoId, playlistIds, onSelectVideo, onBack }: Play
               }}
             />
           )}
-        </section>
-        <PlaylistPanel
-          id={PLAYLIST_PANEL_ID}
-          isOpen={isPlaylistOpen}
-          videos={playlist}
-          currentVideoId={videoId}
-          onSelect={onSelectVideo}
-          onClose={() => setIsPlaylistOpen(false)}
-        />
+        </main>
+        <PlaylistPanel videos={playlist} currentVideoId={videoId} onSelect={onSelectVideo} />
       </div>
     </div>
   );

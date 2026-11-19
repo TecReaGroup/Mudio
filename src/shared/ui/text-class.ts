@@ -9,5 +9,7 @@ export const TEXT_CLASS = {
   cardTitle: 'text-title-sm font-semibold text-foreground',
   meta: 'text-meta text-secondary',
   hint: 'text-meta text-subtle',
+  /** Page name beside the back button; matches the ghost button's text so the two read as one breadcrumb. */
+  barTitle: 'text-control font-medium text-secondary',
   groupLabel: 'text-caption font-medium uppercase tracking-wider text-subtle',
 } as const;

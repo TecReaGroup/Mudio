@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { THEME_PREFERENCES, type Language } from '../../shared/contract/mudio-contract';
+import type { Language } from '../../shared/contract/mudio-contract';
 import { SURFACE_CLASS } from '../../shared/ui/control-class';
 import { PageHeader } from '../../shared/ui/page-header';
 import { SegmentedControl } from '../../shared/ui/segmented-control';
@@ -14,7 +14,7 @@ const LANGUAGE_OPTIONS: readonly { value: Language; label: string }[] = [
   { value: 'en', label: 'English' },
 ];
 
-export type SettingCategory = 'appearance' | 'playback' | 'language';
+export type SettingCategory = 'playback' | 'language';
 
 function SettingRow({ title, description, children }: { title: string; description: string; children: ReactNode }) {
   return (
@@ -25,18 +25,6 @@ function SettingRow({ title, description, children }: { title: string; descripti
       </div>
       {children}
     </div>
-  );
-}
-
-function AppearanceSetting() {
-  const { setting, updateSetting } = useSetting();
-  const message = useMessage().setting;
-  const themeOptions = THEME_PREFERENCES.map(theme => ({ value: theme, label: message.themeOption[theme] }));
-
-  return (
-    <SettingRow title={message.theme} description={message.themeDescription}>
-      <SegmentedControl label={message.theme} options={themeOptions} value={setting.theme} onValueChange={theme => updateSetting({ theme })} />
-    </SettingRow>
   );
 }
 
@@ -81,7 +69,6 @@ function LanguageSetting() {
 }
 
 const CATEGORY_CONTENT: Record<SettingCategory, () => ReactNode> = {
-  appearance: AppearanceSetting,
   playback: PlaybackSetting,
   language: LanguageSetting,
 };

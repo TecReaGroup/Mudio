@@ -60,59 +60,54 @@ export function PlayerControls({ state, commands, isVisible }: PlayerControlsPro
     <div
       onPointerUp={releaseFocus}
       className={cn(
-        'absolute inset-x-0 bottom-0 bg-linear-to-t from-black/85 via-black/45 to-transparent px-5 pb-3 pt-20 text-white transition-opacity duration-(--duration-medium)',
+        'absolute inset-x-4 bottom-4 flex h-13 items-center gap-1 rounded-full bg-black/45 px-2.5 text-white shadow-overlay ring-1 ring-white/10 backdrop-blur-xl transition-opacity duration-(--duration-medium)',
         isVisible ? 'opacity-100' : 'pointer-events-none opacity-0',
       )}
     >
+      <ControlButton label={message.previous} onClick={commands.playPrevious}><SkipBack className="fill-current" /></ControlButton>
+      <ControlButton label={playLabel} onClick={commands.togglePlay}>
+        {state.isPlaying ? <Pause className="fill-current" /> : <Play className="fill-current" />}
+      </ControlButton>
+      <ControlButton label={message.next} onClick={commands.playNext}><SkipForward className="fill-current" /></ControlButton>
+      <div className="group/volume flex items-center">
+        <ControlButton label={state.isMuted ? message.unmute : message.mute} onClick={commands.toggleMute}>
+          <VolumeIcon volume={state.volume} isMuted={state.isMuted} />
+        </ControlButton>
+        <RangeSlider
+          label={message.volume}
+          value={state.isMuted ? 0 : state.volume}
+          max={1}
+          onValueChange={commands.setVolume}
+          className="w-0 opacity-0 transition-[width,opacity,margin] duration-(--duration-medium) group-hover/volume:mx-1.5 group-hover/volume:w-20 group-hover/volume:opacity-100 focus-visible:mx-1.5 focus-visible:w-20 focus-visible:opacity-100"
+        />
+      </div>
+
+      <span className="ml-2 min-w-10 text-control font-medium tabular-nums">{formatDuration(state.currentTime)}</span>
       <RangeSlider
         label={message.progress}
         value={state.currentTime}
         max={state.duration}
         step={0.1}
         onValueChange={commands.seekTo}
-        className="block w-full"
+        className="mx-3 min-w-0 flex-1"
       />
-      <div className="mt-2 flex h-10 items-center">
-        <div className="flex items-center gap-1">
-          <ControlButton label={message.previous} onClick={commands.playPrevious}><SkipBack className="fill-current" /></ControlButton>
-          <IconButton tone="mediaPrimary" size="xl" label={playLabel} onClick={commands.togglePlay} layoutClassName="mx-1">
-            {state.isPlaying ? <Pause className="fill-current" /> : <Play className="ml-0.5 fill-current" />}
-          </IconButton>
-          <ControlButton label={message.next} onClick={commands.playNext}><SkipForward className="fill-current" /></ControlButton>
-        </div>
-        <span className="ml-4 text-control font-medium tabular-nums">
-          {formatDuration(state.currentTime)}
-          <span className="text-white/55"> / {formatDuration(state.duration)}</span>
-        </span>
+      <span className="mr-2 min-w-10 text-right text-control font-medium tabular-nums text-white/75">
+        -{formatDuration(state.duration - state.currentTime)}
+      </span>
 
-        <div className="ml-auto flex items-center gap-1">
-          <div className="flex items-center gap-1 pr-2">
-            <ControlButton label={state.isMuted ? message.unmute : message.mute} onClick={commands.toggleMute}>
-              <VolumeIcon volume={state.volume} isMuted={state.isMuted} />
-            </ControlButton>
-            <RangeSlider
-              label={message.volume}
-              value={state.isMuted ? 0 : state.volume}
-              max={1}
-              onValueChange={commands.setVolume}
-              className="w-24"
-            />
-          </div>
-          <Button
-            tone="media"
-            size="sm"
-            title={message.playbackRate}
-            aria-label={`${message.playbackRate} ${state.playbackRate}x`}
-            onClick={commands.cyclePlaybackRate}
-            layoutClassName="min-w-12 tabular-nums"
-          >
-            {state.playbackRate}x
-          </Button>
-          <ControlButton label={state.isFullscreen ? message.exitFullscreen : message.enterFullscreen} onClick={commands.toggleFullscreen}>
-            {state.isFullscreen ? <Minimize /> : <Maximize />}
-          </ControlButton>
-        </div>
-      </div>
+      <Button
+        tone="media"
+        size="sm"
+        title={message.playbackRate}
+        aria-label={`${message.playbackRate} ${state.playbackRate}x`}
+        onClick={commands.cyclePlaybackRate}
+        layoutClassName="min-w-11 tabular-nums"
+      >
+        {state.playbackRate}x
+      </Button>
+      <ControlButton label={state.isFullscreen ? message.exitFullscreen : message.enterFullscreen} onClick={commands.toggleFullscreen}>
+        {state.isFullscreen ? <Minimize /> : <Maximize />}
+      </ControlButton>
     </div>
   );
 }

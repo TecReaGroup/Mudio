@@ -1,13 +1,8 @@
 import { Play } from 'lucide-react';
 import type { VideoEntry } from '../../shared/contract/mudio-contract';
-import { formatFileSize } from '../../shared/lib/format';
 import { CardCaption } from './card-caption';
+import { describeVideoFile } from './video-file-meta';
 import { VideoThumbnail } from './video-thumbnail';
-
-function fileExtension(filePath: string): string {
-  const dotIndex = filePath.lastIndexOf('.');
-  return dotIndex >= 0 ? filePath.slice(dotIndex + 1).toUpperCase() : '';
-}
 
 interface VideoCardProps {
   video: VideoEntry;
@@ -16,7 +11,6 @@ interface VideoCardProps {
 
 export function VideoCard({ video, onPlay }: VideoCardProps) {
   const watchedPercent = video.durationSec ? Math.min(100, (video.resumePositionSec / video.durationSec) * 100) : 0;
-  const metaParts = [fileExtension(video.filePath), formatFileSize(video.sizeBytes)].filter(Boolean);
 
   return (
     <article className="group relative">
@@ -36,7 +30,7 @@ export function VideoCard({ video, onPlay }: VideoCardProps) {
           </div>
         )}
       </div>
-      <CardCaption title={video.title} meta={metaParts.join(' · ')} tooltip={video.filePath} onActivate={onPlay} />
+      <CardCaption title={video.title} meta={describeVideoFile(video)} tooltip={video.filePath} onActivate={onPlay} />
     </article>
   );
 }

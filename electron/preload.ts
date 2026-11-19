@@ -28,6 +28,9 @@ const mudioApi: MudioApi = {
     takePendingVideoId: () => ipcRenderer.invoke(IPC_CHANNEL.launchTakePending),
     onOpenVideo: listener => subscribe(IPC_CHANNEL.launchOpenVideo, listener),
   },
+  window: {
+    setCaptionScheme: scheme => ipcRenderer.send(IPC_CHANNEL.windowSetCaptionScheme, scheme),
+  },
   pathForFile: file => webUtils.getPathForFile(file),
   log: (level, module, message) => ipcRenderer.send(IPC_CHANNEL.log, level, module, message),
 };

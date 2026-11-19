@@ -28,6 +28,7 @@ const ZH_CN = {
     dropToOpen: '松开以打开视频',
   },
   player: {
+    pageTitle: '视频',
     play: '播放 (空格)',
     pause: '暂停 (空格)',
     progress: '播放进度',
@@ -46,10 +47,7 @@ const ZH_CN = {
     playbackErrorHint: '文件可能已被移动，或使用了不受支持的编码格式',
   },
   setting: {
-    category: { appearance: '外观', playback: '播放', language: '语言' },
-    theme: '主题',
-    themeDescription: '选择界面的配色方案',
-    themeOption: { system: '跟随系统', light: '浅色', dark: '深色' },
+    category: { playback: '播放', language: '语言' },
     autoplayNext: '自动播放下一个',
     autoplayNextDescription: '当前视频结束后播放列表中的下一个视频',
     resumePlayback: '记住播放进度',
@@ -94,6 +92,7 @@ const EN: Messages = {
     dropToOpen: 'Release to open videos',
   },
   player: {
+    pageTitle: 'Video',
     play: 'Play (Space)',
     pause: 'Pause (Space)',
     progress: 'Playback progress',
@@ -112,10 +111,7 @@ const EN: Messages = {
     playbackErrorHint: 'The file may have been moved, or uses an unsupported codec',
   },
   setting: {
-    category: { appearance: 'Appearance', playback: 'Playback', language: 'Language' },
-    theme: 'Theme',
-    themeDescription: 'Choose the interface color scheme',
-    themeOption: { system: 'System', light: 'Light', dark: 'Dark' },
+    category: { playback: 'Playback', language: 'Language' },
     autoplayNext: 'Autoplay next',
     autoplayNextDescription: 'Play the next video in the playlist when the current one ends',
     resumePlayback: 'Remember progress',
