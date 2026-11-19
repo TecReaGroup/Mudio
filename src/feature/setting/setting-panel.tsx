@@ -4,8 +4,9 @@ import { SURFACE_CLASS } from '../../shared/ui/control-class';
 import { PageHeader } from '../../shared/ui/page-header';
 import { SegmentedControl } from '../../shared/ui/segmented-control';
 import { Switch } from '../../shared/ui/switch';
-import { TEXT_CLASS } from '../../shared/ui/text-class';
+import { LibraryFolderSetting } from './library-folder-setting';
 import { useSetting } from './setting-context';
+import { SettingRow } from './setting-row';
 import { useMessage } from './use-message';
 
 // Each language is labeled in itself so users can find theirs regardless of the current language.
@@ -14,19 +15,7 @@ const LANGUAGE_OPTIONS: readonly { value: Language; label: string }[] = [
   { value: 'en', label: 'English' },
 ];
 
-export type SettingCategory = 'playback' | 'language';
-
-function SettingRow({ title, description, children }: { title: string; description: string; children: ReactNode }) {
-  return (
-    <div className="flex items-center justify-between gap-6 px-5 py-4">
-      <div className="min-w-0">
-        <p className={TEXT_CLASS.label}>{title}</p>
-        <p className={`mt-1 ${TEXT_CLASS.meta}`}>{description}</p>
-      </div>
-      {children}
-    </div>
-  );
-}
+export type SettingCategory = 'playback' | 'language' | 'libraryFolder';
 
 function PlaybackSetting() {
   const { setting, updateSetting } = useSetting();
@@ -62,6 +51,7 @@ function LanguageSetting() {
 const CATEGORY_CONTENT: Record<SettingCategory, () => ReactNode> = {
   playback: PlaybackSetting,
   language: LanguageSetting,
+  libraryFolder: LibraryFolderSetting,
 };
 
 /** Every change saves immediately; there is no submit step. */

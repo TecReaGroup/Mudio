@@ -20,6 +20,12 @@ const mudioApi: MudioApi = {
       ipcRenderer.invoke(IPC_CHANNEL.libraryAttachPoster, videoId, jpegBytes, durationSec),
     onChanged: listener => subscribe(IPC_CHANNEL.libraryChanged, listener),
   },
+  libraryFolder: {
+    list: () => ipcRenderer.invoke(IPC_CHANNEL.libraryFolderList),
+    pickAndAdd: () => ipcRenderer.invoke(IPC_CHANNEL.libraryFolderPickAndAdd),
+    remove: folderPath => ipcRenderer.invoke(IPC_CHANNEL.libraryFolderRemove, folderPath),
+    rescan: () => ipcRenderer.invoke(IPC_CHANNEL.libraryFolderRescan),
+  },
   setting: {
     load: () => ipcRenderer.invoke(IPC_CHANNEL.settingLoad),
     save: setting => ipcRenderer.invoke(IPC_CHANNEL.settingSave, setting),

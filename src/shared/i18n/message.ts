@@ -48,7 +48,18 @@ const ZH_CN = {
     playbackErrorHint: '文件可能已被移动，或使用了不受支持的编码格式',
   },
   setting: {
-    category: { playback: '播放', language: '语言' },
+    category: { playback: '播放', language: '语言', libraryFolder: '文件夹' },
+    libraryFolder: {
+      title: '媒体库文件夹',
+      description: (depth: number) => `启动时自动扫描，包括最多 ${depth} 层子文件夹`,
+      add: '添加文件夹',
+      rescan: '重新扫描',
+      empty: '还没有添加文件夹',
+      remove: '移除文件夹',
+      removeConfirmTitle: '移除这个文件夹？',
+      removeConfirmDescription: (folderPath: string) => `“${folderPath}”中的视频会从媒体库移除，播放进度和缩略图将被清除，原文件不会被删除。`,
+      removeConfirm: '移除',
+    },
     resumePlayback: '记住播放进度',
     resumePlaybackDescription: '再次打开视频时从上次的位置继续',
     language: '界面语言',
@@ -58,6 +69,7 @@ const ZH_CN = {
     videoFilter: '视频',
     openVideo: '打开视频',
     importFolder: '导入文件夹',
+    addLibraryFolder: '添加媒体库文件夹',
   },
 };
 
@@ -111,7 +123,18 @@ const EN: Messages = {
     playbackErrorHint: 'The file may have been moved, or uses an unsupported codec',
   },
   setting: {
-    category: { playback: 'Playback', language: 'Language' },
+    category: { playback: 'Playback', language: 'Language', libraryFolder: 'Folders' },
+    libraryFolder: {
+      title: 'Library folders',
+      description: depth => `Scanned on startup, including up to ${depth} levels of subfolders`,
+      add: 'Add Folder',
+      rescan: 'Rescan',
+      empty: 'No folders added yet',
+      remove: 'Remove folder',
+      removeConfirmTitle: 'Remove this folder?',
+      removeConfirmDescription: folderPath => `Videos in "${folderPath}" will be removed from the library, along with their progress and thumbnails. The files themselves are not deleted.`,
+      removeConfirm: 'Remove',
+    },
     resumePlayback: 'Remember progress',
     resumePlaybackDescription: 'Continue from where you left off when reopening a video',
     language: 'Display language',
@@ -121,6 +144,7 @@ const EN: Messages = {
     videoFilter: 'Videos',
     openVideo: 'Open Videos',
     importFolder: 'Import Folder',
+    addLibraryFolder: 'Add Library Folder',
   },
 };
 

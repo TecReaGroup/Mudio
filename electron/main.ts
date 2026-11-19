@@ -65,6 +65,9 @@ function startApp(): void {
 
       await opener.open(earlyOpenPaths);
       showMainWindow();
+      // In the background: new videos stream into the open window instead of delaying it.
+      library.rescanFolders()
+        .catch(error => log('error', 'Library', `Startup folder rescan failed: ${describeError(error)}`));
       app.on('activate', () => {
         if (!mainWindow) showMainWindow();
       });

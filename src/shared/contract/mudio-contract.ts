@@ -1,5 +1,8 @@
 export const SUPPORTED_VIDEO_EXTENSIONS = ['mp4', 'm4v', 'webm', 'mkv', 'mov', 'ogv'] as const;
 
+/** Subfolder levels scanned below an imported or library folder. */
+export const FOLDER_SCAN_MAX_DEPTH = 5;
+
 export const MEDIA_SCHEME = 'mudio-media';
 
 export const MEDIA_HOST = {
@@ -59,6 +62,10 @@ export const IPC_CHANNEL = {
   libraryRecordPlayback: 'library:record-playback',
   libraryAttachPoster: 'library:attach-poster',
   libraryChanged: 'library:changed',
+  libraryFolderList: 'library-folder:list',
+  libraryFolderPickAndAdd: 'library-folder:pick-and-add',
+  libraryFolderRemove: 'library-folder:remove',
+  libraryFolderRescan: 'library-folder:rescan',
   settingLoad: 'setting:load',
   settingSave: 'setting:save',
   settingChanged: 'setting:changed',
@@ -87,6 +94,15 @@ export interface MudioApi {
     recordPlayback(videoId: string, positionSec: number): Promise<void>;
     attachPoster(videoId: string, jpegBytes: Uint8Array, durationSec: number | null): Promise<void>;
     onChanged(listener: (videos: VideoEntry[]) => void): Unsubscribe;
+  };
+  /** Folders the library keeps in sync with: scanned on startup and on demand. */
+  libraryFolder: {
+    list(): Promise<string[]>;
+    /** Shows a folder picker, remembers the folder and imports its videos; resolves to the updated folders. */
+    pickAndAdd(): Promise<string[]>;
+    /** Forgets the folder and removes its videos from the library; files on disk are untouched. */
+    remove(folderPath: string): Promise<string[]>;
+    rescan(): Promise<void>;
   };
   setting: {
     load(): Promise<AppSetting>;

@@ -30,6 +30,18 @@ export function registerLibraryIpc(library: VideoLibrary, settingStore: SettingS
     return selection.canceled ? [] : library.importPaths(selection.filePaths);
   });
 
+  ipcMain.handle(IPC_CHANNEL.libraryFolderList, () => library.listFolders());
+
+  ipcMain.handle(IPC_CHANNEL.libraryFolderPickAndAdd, async event => {
+    const selection = await showOpenDialogFor(event, { title: dialogMessage().addLibraryFolder, properties: ['openDirectory'] });
+    return selection.canceled ? library.listFolders() : library.addFolder(selection.filePaths[0]);
+  });
+
+  ipcMain.handle(IPC_CHANNEL.libraryFolderRemove, (_event, folderPath: unknown) =>
+    library.removeFolder(expectString(folderPath, 'folderPath')));
+
+  ipcMain.handle(IPC_CHANNEL.libraryFolderRescan, () => library.rescanFolders());
+
   ipcMain.handle(IPC_CHANNEL.libraryImportPaths, (_event, paths: unknown) =>
     library.importPaths(expectStringArray(paths, 'paths')));
 

@@ -1,4 +1,4 @@
-import { Languages, MonitorPlay, type LucideIcon } from 'lucide-react';
+import { FolderOpen, Languages, MonitorPlay, type LucideIcon } from 'lucide-react';
 import { useState } from 'react';
 import { SettingPanel, type SettingCategory } from '../../feature/setting/setting-panel';
 import { useMessage } from '../../feature/setting/use-message';
@@ -10,6 +10,7 @@ import { TEXT_CLASS } from '../../shared/ui/text-class';
 const CATEGORY_NAV: readonly { category: SettingCategory; icon: LucideIcon }[] = [
   { category: 'playback', icon: MonitorPlay },
   { category: 'language', icon: Languages },
+  { category: 'libraryFolder', icon: FolderOpen },
 ];
 
 export function SettingPage({ onBack }: { onBack: () => void }) {
