@@ -23,6 +23,7 @@ pnpm-debug.log*
 output/playwright/
 playwright-report/
 test-results/
+coverage/
 
 # Editors and operating systems
 .idea/

@@ -9,7 +9,8 @@
     "dev": "vite",
     "backend": "node backend/server.mjs",
     "build": "tsc -b && vite build",
-    "package": "npm run build && electron-builder"
+    "package": "npm run build && electron-builder",
+    "test": "vitest run"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -26,16 +27,21 @@
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.1.7",
+    "@testing-library/dom": "^10.4.0",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^14.6.1",
     "@types/node": "^22.15.0",
     "@types/react": "^19.1.0",
     "@types/react-dom": "^19.1.0",
     "@vitejs/plugin-react": "^4.5.0",
     "electron": "^36.3.0",
     "electron-builder": "^26.0.12",
+    "jsdom": "^26.1.0",
     "tailwindcss": "^4.1.7",
     "typescript": "^5.8.3",
     "vite": "^6.3.5",
-    "vite-plugin-electron": "^0.29.0"
+    "vite-plugin-electron": "^0.29.0",
+    "vitest": "^3.2.4"
   },
   "build": {
     "appId": "com.mudio.app",
