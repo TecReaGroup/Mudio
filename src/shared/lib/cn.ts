@@ -10,6 +10,9 @@ const twMerge = extendTailwindMerge({
       radius: ['control-sm', 'control', 'card', 'dialog'],
       shadow: ['rest', 'raised', 'overlay'],
     },
+    classGroups: {
+      duration: [{ duration: ['short', 'medium', 'long'] }],
+    },
   },
 });
 

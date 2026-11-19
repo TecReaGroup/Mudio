@@ -1,11 +1,14 @@
 import { ChevronDown, Folder, X } from 'lucide-react';
 import { useId, useRef, useState, type FocusEvent, type KeyboardEvent, type MouseEvent } from 'react';
 import { cn } from '../../shared/lib/cn';
+import { IconButton } from '../../shared/ui/button';
 import { DIALOG_TEXT_FIELD_CLASS, FOCUS_RING_CLASS } from '../../shared/ui/control-class';
 import { TEXT_CLASS } from '../../shared/ui/text-class';
 import { useMessage } from '../setting/use-message';
 
 const CHIP_CLASS = 'inline-flex h-7 max-w-full items-center rounded-control-sm bg-accent-soft text-control font-medium text-accent';
+/** Layout for a dialog hosting the picker: wider for chips, with visible overflow so the dropdown can float past its edge. */
+export const PICKER_HOST_DIALOG_CLASS = 'w-[min(30rem,calc(100vw-2rem))] overflow-visible';
 /** Matches the dropdown's max-h-56 plus its gap to the field; less room than this below the field flips it upward. */
 const DROPDOWN_SPACE_PX = 236;
 const OPTION_CLASS =
@@ -30,7 +33,7 @@ interface PlaylistPickerProps {
 /**
  * Tag combobox: selected playlists are chips inside the field, and typing in the same field filters
  * the floating dropdown or names a new playlist.
- * NOTE: The host dialog must allow visible overflow, or the dropdown is clipped at its edge.
+ * NOTE: The host dialog must use PICKER_HOST_DIALOG_CLASS, or the dropdown is clipped at its edge.
  */
 export function PlaylistPicker({ selectedTitles, lockedTitles, existingTitles, description, onChange }: PlaylistPickerProps) {
   const editMessage = useMessage().library.edit;
@@ -145,10 +148,10 @@ export function PlaylistPicker({ selectedTitles, lockedTitles, existingTitles, d
           />
           {/* Toggled on mousedown, before the field's own handler refocuses the input and reopens the list.
               Out of the tab order: the input already opens it with ArrowDown and closes it with Escape. */}
-          <button
-            type="button"
+          <IconButton
+            size="sm"
             tabIndex={-1}
-            aria-label={editMessage.togglePlaylistOption}
+            label={editMessage.togglePlaylistOption}
             aria-controls={listId}
             aria-expanded={isOpen}
             onMouseDown={event => {
@@ -161,13 +164,10 @@ export function PlaylistPicker({ selectedTitles, lockedTitles, existingTitles, d
                 open();
               }
             }}
-            className="absolute right-1.5 flex size-7 cursor-pointer items-center justify-center rounded-control-sm text-subtle transition-colors hover:bg-hover hover:text-foreground"
+            layoutClassName="absolute right-1.5"
           >
-            <ChevronDown
-              aria-hidden
-              className={cn('size-4 transition-transform duration-(--duration-medium)', isOpen && 'rotate-180')}
-            />
-          </button>
+            <ChevronDown aria-hidden className={cn('transition-transform duration-medium', isOpen && 'rotate-180')} />
+          </IconButton>
         </div>
         {isOpen && (canCreate || suggestions.length > 0 || isFirstPlaylist) && (
           <ul

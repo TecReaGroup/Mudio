@@ -133,7 +133,7 @@ export function PlaylistPanel({ title, videos, currentVideoId, isCurrentPlaying,
       <header className="flex h-14 shrink-0 items-center justify-between gap-3 border-b border-line-subtle pl-4 pr-2">
         <div className="flex min-w-0 items-baseline gap-2">
           <h2 className={cn('truncate', TEXT_CLASS.panelTitle)}>{title}</h2>
-          <span className="shrink-0 text-meta tabular-nums text-subtle">
+          <span className={cn('shrink-0 tabular-nums', TEXT_CLASS.hint)}>
             {currentIndex + 1} / {videos.length}
           </span>
         </div>

@@ -20,7 +20,7 @@ export function Switch({ checked, onCheckedChange, label }: SwitchProps) {
         FOCUS_RING_CLASS,
       )}
     >
-      <span className="size-4 translate-x-0.5 rounded-full bg-white shadow-rest transition-transform duration-(--duration-medium) group-aria-checked:translate-x-4.5" />
+      <span className="size-4 translate-x-0.5 rounded-full bg-white shadow-rest transition-transform duration-medium group-aria-checked:translate-x-4.5" />
     </button>
   );
 }

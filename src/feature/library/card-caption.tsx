@@ -2,8 +2,9 @@ import type { ReactNode } from 'react';
 import { TEXT_CLASS } from '../../shared/ui/text-class';
 
 // NOTE: Toggles display rather than opacity so hidden buttons free their width; focus on the title button reveals them for keyboard users.
+// An opacity transition cannot run from display:none, so `starting:` supplies the frame it fades in from.
 const ACTION_REVEAL_CLASS =
-  'flex [@media(hover:hover)]:hidden group-hover:flex group-has-[:focus-visible]:flex';
+  'flex [@media(hover:hover)]:hidden group-hover:flex group-has-[:focus-visible]:flex transition-opacity starting:opacity-0';
 
 interface CardCaptionProps {
   title: string;

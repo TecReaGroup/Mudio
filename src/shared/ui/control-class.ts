@@ -17,6 +17,9 @@ export const TEXT_FIELD_CLASS =
 export const DIALOG_TEXT_FIELD_CLASS =
   `rounded-control border border-line bg-surface px-3 text-control text-foreground outline-none placeholder:text-subtle hover:border-line-strong ${INPUT_FOCUS_CLASS}`;
 
+/** Frosted dark surface floating over video (popovers, transient status pills); callers add radius and padding. */
+export const MEDIA_GLASS_CLASS = 'bg-black/60 text-white shadow-overlay ring-1 ring-white/10 backdrop-blur-xl';
+
 /** Card / panel shell: content surface, hairline border, resting shadow. */
 export const SURFACE_CLASS = 'rounded-card border border-line bg-surface shadow-rest';
 

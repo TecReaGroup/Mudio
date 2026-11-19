@@ -63,6 +63,61 @@ export function Modal({ title, description, closeLabel, onClose, icon, layoutCla
   );
 }
 
+interface FormDialogProps {
+  title: string;
+  closeLabel: string;
+  cancelLabel: string;
+  submitLabel: string;
+  /** Called on submit; the dialog closes right after. */
+  onSubmit: () => void;
+  onClose: () => void;
+  submitDisabled?: boolean;
+  layoutClassName?: string;
+  children: ReactNode;
+}
+
+/** Modal holding one form: fields stacked in the body, Cancel / submit in a divided footer. */
+export function FormDialog({ title, closeLabel, cancelLabel, submitLabel, onSubmit, onClose, submitDisabled, layoutClassName, children }: FormDialogProps) {
+  return (
+    <Modal title={title} closeLabel={closeLabel} onClose={onClose} layoutClassName={layoutClassName}>
+      <form
+        onSubmit={event => {
+          event.preventDefault();
+          onSubmit();
+          onClose();
+        }}
+      >
+        <div className="space-y-6 px-5 pb-8 pt-1">{children}</div>
+        <div className="flex items-center justify-between gap-2 border-t border-line-subtle px-5 py-4">
+          <Button onClick={onClose}>{cancelLabel}</Button>
+          <Button type="submit" tone="primary" disabled={submitDisabled}>{submitLabel}</Button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+interface DialogSubjectProps {
+  /** Thumbnail or icon tile at the left. */
+  visual: ReactNode;
+  /** Full path or name; wraps to two lines and shows whole on hover. */
+  label: string;
+  meta: ReactNode;
+}
+
+/** Read-only summary of what a dialog edits, at the top of its body. */
+export function DialogSubject({ visual, label, meta }: DialogSubjectProps) {
+  return (
+    <div className="flex items-center gap-4 rounded-card border border-line-subtle p-3">
+      {visual}
+      <div className="min-w-0 flex-1 space-y-1">
+        <p title={label} className={cn('line-clamp-2 wrap-anywhere', TEXT_CLASS.meta)}>{label}</p>
+        <p className={TEXT_CLASS.hint}>{meta}</p>
+      </div>
+    </div>
+  );
+}
+
 interface ConfirmDeleteDialogProps {
   title: string;
   description: ReactNode;

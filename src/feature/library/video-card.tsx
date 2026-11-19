@@ -2,11 +2,17 @@ import { Pencil, Play, Trash2 } from 'lucide-react';
 import { memo } from 'react';
 import type { VideoEntry } from '../../shared/contract/mudio-contract';
 import { IconButton } from '../../shared/ui/button';
-import { HOVER_REVEAL_CLASS } from '../../shared/ui/control-class';
 import { useMessage } from '../setting/use-message';
 import { CardCaption } from './card-caption';
+import { CardCover } from './card-cover';
 import { describeVideoFile } from './video-file-meta';
-import { VideoThumbnail } from './video-thumbnail';
+import { VideoCover, VideoDurationBadge } from './video-thumbnail';
+
+const PLAY_GLYPH = (
+  <span className="flex size-12 scale-90 items-center justify-center rounded-full bg-white/95 text-black opacity-0 shadow-raised transition-[opacity,scale] duration-medium group-hover:scale-100 group-hover:opacity-100">
+    <Play className="ml-0.5 size-5 fill-current" />
+  </span>
+);
 
 interface VideoCardProps {
   video: VideoEntry;
@@ -22,17 +28,11 @@ export const VideoCard = memo(function VideoCard({ video, onPlay, onEdit, onRemo
 
   const actions = (
     <>
-      <IconButton size="md" label={libraryMessage.edit.action} layoutClassName={HOVER_REVEAL_CLASS} onClick={() => onEdit(video.id)}>
+      <IconButton size="md" label={libraryMessage.edit.action} onClick={() => onEdit(video.id)}>
         <Pencil />
       </IconButton>
       {onRemoveFromRecent && (
-        <IconButton
-          size="md"
-          tone="quietDanger"
-          label={libraryMessage.removeFromRecent}
-          layoutClassName={HOVER_REVEAL_CLASS}
-          onClick={() => onRemoveFromRecent(video.id)}
-        >
+        <IconButton size="md" tone="quietDanger" label={libraryMessage.removeFromRecent} onClick={() => onRemoveFromRecent(video.id)}>
           <Trash2 />
         </IconButton>
       )}
@@ -41,17 +41,9 @@ export const VideoCard = memo(function VideoCard({ video, onPlay, onEdit, onRemo
 
   return (
     <article className="group relative">
-      <div className="relative">
-        <VideoThumbnail
-          video={video}
-          layoutClassName="rounded-card transition-shadow duration-(--duration-medium) group-hover:shadow-raised in-data-dragging:shadow-overlay"
-        />
-        <div aria-hidden className="absolute inset-0 flex items-center justify-center rounded-card transition-colors group-hover:bg-black/20">
-          <span className="flex size-12 scale-90 items-center justify-center rounded-full bg-white/95 text-black opacity-0 shadow-raised transition-[opacity,scale] duration-(--duration-medium) group-hover:scale-100 group-hover:opacity-100">
-            <Play className="ml-0.5 size-5 fill-current" />
-          </span>
-        </div>
-      </div>
+      <CardCover hoverGlyph={PLAY_GLYPH} badge={<VideoDurationBadge video={video} />}>
+        <VideoCover video={video} />
+      </CardCover>
       <CardCaption
         title={video.title}
         meta={describeVideoFile(video)}

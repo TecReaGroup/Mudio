@@ -7,7 +7,8 @@ import { useMessage } from '../../feature/setting/use-message';
 import type { Playlist } from '../../shared/contract/mudio-contract';
 import { BrowseShell } from '../../shared/ui/browse-shell';
 import { IconButton } from '../../shared/ui/button';
-import { INPUT_FOCUS_CLASS } from '../../shared/ui/control-class';
+import { cn } from '../../shared/lib/cn';
+import { TEXT_FIELD_CLASS } from '../../shared/ui/control-class';
 import { NavList } from '../../shared/ui/nav-list';
 
 const LIBRARY_NAV: readonly { section: LibrarySection; icon: LucideIcon }[] = [
@@ -41,7 +42,7 @@ export function HomePage({ section, onSectionChange, onOpenSetting, onPlay, onPl
   }));
 
   const searchBox = (
-    <label className={`no-drag flex h-9 w-full items-center gap-2 rounded-control border border-transparent bg-sunken pl-3 pr-1 text-secondary ${INPUT_FOCUS_CLASS}`}>
+    <label className={cn(TEXT_FIELD_CLASS, 'no-drag flex h-9 w-full items-center gap-2 pr-1 text-secondary')}>
       <Search aria-hidden className="size-4 shrink-0" />
       <input
         ref={searchInputRef}

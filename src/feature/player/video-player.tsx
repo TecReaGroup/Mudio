@@ -5,6 +5,7 @@ import type { VideoEntry } from '../../shared/contract/mudio-contract';
 import { cn } from '../../shared/lib/cn';
 import { describeError, log } from '../../shared/lib/logger';
 import { BrandMark } from '../../shared/ui/brand-mark';
+import { MEDIA_GLASS_CLASS } from '../../shared/ui/control-class';
 import { Spinner } from '../../shared/ui/feedback';
 import { useSetting } from '../setting/setting-context';
 import { useMessage } from '../setting/use-message';
@@ -190,7 +191,7 @@ export function VideoPlayer({ video, autoPlay, onPrevious, onNext, loop, onEnded
         </div>
       )}
       {pressHold && (
-        <div role="status" className="pointer-events-none absolute left-1/2 top-20 flex -translate-x-1/2 animate-pop-in items-center gap-1.5 rounded-full bg-black/60 px-3 py-1.5 text-control font-medium tabular-nums text-white shadow-overlay ring-1 ring-white/10 backdrop-blur-xl">
+        <div role="status" className={cn('pointer-events-none absolute left-1/2 top-20 flex -translate-x-1/2 animate-pop-in items-center gap-1.5 rounded-full px-3 py-1.5 text-control font-medium tabular-nums', MEDIA_GLASS_CLASS)}>
           {pressHold === 'rewind' ? <Rewind aria-hidden className="size-4 fill-current" /> : <FastForward aria-hidden className="size-4 fill-current" />}
           {PRESS_HOLD_RATE}x
         </div>
@@ -200,7 +201,7 @@ export function VideoPlayer({ video, autoPlay, onPrevious, onNext, loop, onEnded
       {/* Paused-only mark, after the controls so it paints above their scrim. Pinned above the progress line's end; it only fades, never shifts. */}
       <BrandMark
         layoutClassName={cn(
-          'pointer-events-none absolute bottom-20 right-10 h-15 text-foreground drop-shadow-[0_1px_8px_rgb(0_0_0/0.45)] transition-opacity duration-(--duration-long)',
+          'pointer-events-none absolute bottom-20 right-10 h-15 text-foreground drop-shadow-[0_1px_8px_rgb(0_0_0/0.45)] transition-opacity duration-long',
           state.isPlaying ? 'opacity-0' : 'opacity-100',
         )}
       />

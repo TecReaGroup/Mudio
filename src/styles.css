@@ -33,14 +33,23 @@
   --text-title-lg: 22px;
   --text-title-lg--line-height: 28px;
 
+  /*
+   * Motion scale, exposed as `duration-short|medium|long`; no raw ms values at call sites.
+   * short: hover / press feedback. medium: small elements entering (popover, thumb, toggle).
+   * long: larger surfaces and content swaps (page fade, player chrome, image load).
+   */
+  --transition-duration-*: initial;
+  --transition-duration-short: 120ms;
+  --transition-duration-medium: 200ms;
+  --transition-duration-long: 320ms;
+
   --ease-standard: cubic-bezier(0.2, 0, 0, 1);
-  --default-transition-duration: var(--duration-short);
+  --default-transition-duration: var(--transition-duration-short);
   --default-transition-timing-function: var(--ease-standard);
 
-  --animate-fade-in: fade-in var(--duration-long) var(--ease-standard) both;
-  --animate-pop-in: pop-in var(--duration-medium) var(--ease-standard) both;
-  --animate-panel-in: panel-in var(--duration-long) var(--ease-standard) both;
-  --animate-overlay-in: overlay-in var(--duration-medium) var(--ease-standard) both;
+  --animate-fade-in: fade-in var(--transition-duration-long) var(--ease-standard) both;
+  --animate-pop-in: pop-in var(--transition-duration-medium) var(--ease-standard) both;
+  --animate-overlay-in: overlay-in var(--transition-duration-medium) var(--ease-standard) both;
   --animate-equalizer: equalizer 900ms ease-in-out infinite;
 
   @keyframes fade-in {
@@ -48,9 +57,6 @@
   }
   @keyframes pop-in {
     from { opacity: 0; transform: translateY(-4px) scale(0.98); }
-  }
-  @keyframes panel-in {
-    from { opacity: 0; transform: translateX(12px); }
   }
   /* Opacity only: moving a backdrop would expose the page edge. */
   @keyframes overlay-in {
@@ -121,10 +127,6 @@
   --shadow-rest-value: 0 1px 2px rgb(0 0 0 / 0.05);
   --shadow-raised-value: 0 6px 16px -4px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.06);
   --shadow-overlay-value: 0 18px 44px -10px rgb(0 0 0 / 0.22), 0 4px 12px -4px rgb(0 0 0 / 0.1);
-
-  --duration-short: 120ms;
-  --duration-medium: 200ms;
-  --duration-long: 320ms;
 
   /* Stacking layers, low → high. Modals use the native top layer instead. */
   --layer-raised: 10;
@@ -270,7 +272,7 @@ h3 {
       currentColor var(--slider-fill),
       color-mix(in srgb, currentColor 28%, transparent) var(--slider-fill)
     );
-    transition: height var(--duration-medium) var(--ease-standard);
+    transition: height var(--transition-duration-medium) var(--ease-standard);
   }
 
   .range-slider::-webkit-slider-thumb {
@@ -283,7 +285,7 @@ h3 {
     box-shadow: 0 1px 3px rgb(0 0 0 / 0.35);
     /* Hidden at rest so the track reads as one clean line; it grows in on interaction. */
     transform: scale(0);
-    transition: transform var(--duration-medium) var(--ease-standard);
+    transition: transform var(--transition-duration-medium) var(--ease-standard);
   }
 
   .range-slider:hover::-webkit-slider-thumb,
