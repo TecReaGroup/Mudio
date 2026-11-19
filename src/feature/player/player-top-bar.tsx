@@ -7,15 +7,15 @@ const FADE_CLASS = 'pointer-events-none absolute inset-x-0 top-0 transition-opac
 /** Title overlay; shows and hides together with the bottom controls. */
 export function PlayerTopBar({ video, isVisible }: { video: VideoEntry; isVisible: boolean }) {
   const visibilityClass = isVisible ? 'opacity-100' : 'opacity-0';
-  // NOTE: The backdrop is a sibling, not a parent, of the text: a fading (opacity < 1) ancestor
-  // would cut the blur off from the video, and the mask that softens its edge would also clip the text.
+  // NOTE: The scrim is a sibling, not a parent, of the text, or the mask that softens its edge would clip the text.
+  // No backdrop blur: over playing video it re-blurs every frame, while a translucent gradient costs nearly nothing.
   return (
     <>
       <div
         aria-hidden
         className={cn(
           FADE_CLASS,
-          'h-28 bg-linear-to-b from-black/60 to-transparent backdrop-blur-sm mask-[linear-gradient(to_bottom,black_45%,transparent)]',
+          'h-28 bg-linear-to-b from-black/60 to-transparent mask-[linear-gradient(to_bottom,black_45%,transparent)]',
           visibilityClass,
         )}
       />

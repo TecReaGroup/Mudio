@@ -1,5 +1,5 @@
 import { Repeat, Repeat1, type LucideIcon } from 'lucide-react';
-import { useEffect, useRef } from 'react';
+import { memo, useEffect, useRef, type Ref } from 'react';
 import type { PlaybackOrder, VideoEntry } from '../../shared/contract/mudio-contract';
 import { IconButton } from '../../shared/ui/button';
 import { cn } from '../../shared/lib/cn';
@@ -42,6 +42,47 @@ function PlaybackOrderButton() {
   );
 }
 
+interface PlaylistItemProps {
+  video: VideoEntry;
+  isCurrent: boolean;
+  isPlaying: boolean;
+  onSelect: (videoId: string) => void;
+  ref?: Ref<HTMLButtonElement>;
+}
+
+const PlaylistItem = memo(function PlaylistItem({ video, isCurrent, isPlaying, onSelect, ref }: PlaylistItemProps) {
+  const message = useMessage().player;
+  return (
+    <li>
+      <button
+        ref={ref}
+        type="button"
+        aria-current={isCurrent ? 'true' : undefined}
+        onClick={() => onSelect(video.id)}
+        className={cn(
+          'group flex w-full cursor-pointer items-start gap-3 rounded-card p-2 text-left transition-colors hover:bg-hover aria-[current=true]:bg-accent-soft',
+          FOCUS_RING_CLASS,
+        )}
+      >
+        <div className="relative w-[42%] max-w-40 shrink-0">
+          <VideoThumbnail video={video} />
+          {isCurrent && (
+            <div className="absolute inset-0 flex items-center justify-center rounded-control bg-black/55">
+              <NowPlayingBars isPlaying={isPlaying} label={message.nowPlaying} />
+            </div>
+          )}
+        </div>
+        <div className="min-w-0 flex-1 py-0.5">
+          <p className="line-clamp-2 wrap-anywhere text-control font-medium text-secondary transition-colors group-hover:text-foreground group-aria-[current=true]:text-foreground">
+            {video.title}
+          </p>
+          <p className={cn('mt-1 truncate', TEXT_CLASS.hint)}>{describeVideoFile(video)}</p>
+        </div>
+      </button>
+    </li>
+  );
+});
+
 interface PlaylistPanelProps {
   videos: VideoEntry[];
   currentVideoId: string;
@@ -80,33 +121,15 @@ export function PlaylistPanel({ videos, currentVideoId, isCurrentPlaying, onSele
         {videos.map(video => {
           const isCurrent = video.id === currentVideoId;
           return (
-            <li key={video.id}>
-              <button
-                ref={isCurrent ? currentItemRef : undefined}
-                type="button"
-                aria-current={isCurrent ? 'true' : undefined}
-                onClick={() => onSelect(video.id)}
-                className={cn(
-                  'group flex w-full cursor-pointer items-start gap-3 rounded-card p-2 text-left transition-colors hover:bg-hover aria-[current=true]:bg-accent-soft',
-                  FOCUS_RING_CLASS,
-                )}
-              >
-                <div className="relative w-[42%] max-w-40 shrink-0">
-                  <VideoThumbnail video={video} />
-                  {isCurrent && (
-                    <div className="absolute inset-0 flex items-center justify-center rounded-control bg-black/55">
-                      <NowPlayingBars isPlaying={isCurrentPlaying} label={message.player.nowPlaying} />
-                    </div>
-                  )}
-                </div>
-                <div className="min-w-0 flex-1 py-0.5">
-                  <p className="line-clamp-2 wrap-anywhere text-control font-medium text-secondary transition-colors group-hover:text-foreground group-aria-[current=true]:text-foreground">
-                    {video.title}
-                  </p>
-                  <p className={cn('mt-1 truncate', TEXT_CLASS.hint)}>{describeVideoFile(video)}</p>
-                </div>
-              </button>
-            </li>
+            <PlaylistItem
+              key={video.id}
+              ref={isCurrent ? currentItemRef : undefined}
+              video={video}
+              isCurrent={isCurrent}
+              // Only the current row shows playback state; the rest stay untouched on play/pause.
+              isPlaying={isCurrent && isCurrentPlaying}
+              onSelect={onSelect}
+            />
           );
         })}
       </ol>

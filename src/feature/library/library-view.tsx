@@ -1,4 +1,5 @@
 import { ChevronLeft } from 'lucide-react';
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef } from 'react';
 import { SUPPORTED_VIDEO_EXTENSIONS } from '../../shared/contract/mudio-contract';
 import { Button, IconButton } from '../../shared/ui/button';
 import { EmptyState, ErrorBanner } from '../../shared/ui/feedback';
@@ -26,11 +27,23 @@ export function LibraryView({ collection, searchQuery, onBack, onClearSearch, on
   const { videos, loadError } = useVideoLibrary();
   const message = useMessage();
   const libraryMessage = message.library;
-  const trimmedQuery = searchQuery.trim();
+  // The input updates immediately; filtering a large grid follows at lower priority so typing never stalls.
+  const trimmedQuery = useDeferredValue(searchQuery).trim();
   const normalizedQuery = trimmedQuery.toLowerCase();
-  const collectionVideos = selectCollectionVideos(videos, collection)
-    .filter(video => video.title.toLowerCase().includes(normalizedQuery));
-  const collectionVideoIds = collectionVideos.map(video => video.id);
+  const collectionVideos = useMemo(
+    () => selectCollectionVideos(videos, collection).filter(video => video.title.toLowerCase().includes(normalizedQuery)),
+    [videos, collection, normalizedQuery],
+  );
+
+  // Read at click time, so the callback stays stable and memoized cards survive every library push.
+  const latestCollectionVideos = useRef(collectionVideos);
+  useEffect(() => {
+    latestCollectionVideos.current = collectionVideos;
+  });
+  const playFromCollection = useCallback(
+    (videoId: string) => onPlay(videoId, latestCollectionVideos.current.map(video => video.id)),
+    [onPlay],
+  );
 
   const renderEmptyState = () => {
     if (trimmedQuery) {
@@ -73,7 +86,7 @@ export function LibraryView({ collection, searchQuery, onBack, onClearSearch, on
         <CardGrid key={collection}>
           {collectionVideos.map(video => (
             <li key={video.id}>
-              <VideoCard video={video} onPlay={() => onPlay(video.id, collectionVideoIds)} />
+              <VideoCard video={video} onPlay={playFromCollection} />
             </li>
           ))}
         </CardGrid>

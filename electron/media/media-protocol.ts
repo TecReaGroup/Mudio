@@ -18,6 +18,10 @@ const CONTENT_TYPE_BY_EXTENSION: Record<string, string> = {
   '.jpg': 'image/jpeg',
 };
 
+// Node's 64 KiB default means thousands of stream→Response hops per second on high-bitrate video,
+// all on the main process that also serves IPC; larger reads keep playback and seeking smooth.
+const STREAM_CHUNK_BYTES = 1024 * 1024;
+
 // Single range only: "bytes=start-end", "bytes=start-" or suffix "bytes=-length".
 const BYTE_RANGE_PATTERN = /^bytes=(\d*)-(\d*)$/;
 
@@ -59,7 +63,7 @@ async function serveFile(filePath: string, rangeHeader: string | null): Promise<
     return new Response(null, { status: 416, headers: { ...headers, 'Content-Range': `bytes */${size}` } });
   }
   const { start, end } = rangeRequest.kind === 'partial' ? rangeRequest.range : { start: 0, end: size - 1 };
-  const body = Readable.toWeb(createReadStream(filePath, { start, end })) as unknown as ReadableStream<Uint8Array>;
+  const body = Readable.toWeb(createReadStream(filePath, { start, end, highWaterMark: STREAM_CHUNK_BYTES })) as unknown as ReadableStream<Uint8Array>;
   return new Response(body, {
     status: rangeRequest.kind === 'partial' ? 206 : 200,
     headers: {

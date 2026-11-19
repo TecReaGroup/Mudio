@@ -13,12 +13,29 @@ interface VideoLibraryContextValue {
 
 const VideoLibraryContext = createContext<VideoLibraryContextValue | null>(null);
 
+function isSameEntry(left: VideoEntry, right: VideoEntry): boolean {
+  return (Object.keys(right) as (keyof VideoEntry)[]).every(key => left[key] === right[key]);
+}
+
+/**
+ * IPC pushes arrive as fresh copies of every entry. Keeping the previous object for unchanged entries
+ * lets memoized cards and rows skip re-rendering when only one video changed (e.g. saved progress).
+ */
+function reuseUnchangedEntries(previous: VideoEntry[] | null, next: VideoEntry[]): VideoEntry[] {
+  if (!previous) return next;
+  const previousById = new Map(previous.map(video => [video.id, video]));
+  return next.map(video => {
+    const previousVideo = previousById.get(video.id);
+    return previousVideo && isSameEntry(previousVideo, video) ? previousVideo : video;
+  });
+}
+
 export function VideoLibraryProvider({ children }: { children: ReactNode }) {
   const [videos, setVideos] = useState<VideoEntry[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
-    const unsubscribe = mudio.library.onChanged(setVideos);
+    const unsubscribe = mudio.library.onChanged(nextVideos => setVideos(current => reuseUnchangedEntries(current, nextVideos)));
     mudio.library.list()
       // A push that arrived during the initial fetch is newer, so keep it.
       .then(initialVideos => setVideos(current => current ?? initialVideos))

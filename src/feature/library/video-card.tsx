@@ -1,4 +1,5 @@
 import { Play } from 'lucide-react';
+import { memo } from 'react';
 import type { VideoEntry } from '../../shared/contract/mudio-contract';
 import { CardCaption } from './card-caption';
 import { describeVideoFile } from './video-file-meta';
@@ -6,10 +7,11 @@ import { VideoThumbnail } from './video-thumbnail';
 
 interface VideoCardProps {
   video: VideoEntry;
-  onPlay: () => void;
+  /** Must be stable across renders, or memoization is lost for the whole grid. */
+  onPlay: (videoId: string) => void;
 }
 
-export function VideoCard({ video, onPlay }: VideoCardProps) {
+export const VideoCard = memo(function VideoCard({ video, onPlay }: VideoCardProps) {
   return (
     <article className="group relative">
       <div className="relative">
@@ -23,7 +25,7 @@ export function VideoCard({ video, onPlay }: VideoCardProps) {
           </span>
         </div>
       </div>
-      <CardCaption title={video.title} meta={describeVideoFile(video)} tooltip={video.filePath} onActivate={onPlay} />
+      <CardCaption title={video.title} meta={describeVideoFile(video)} tooltip={video.filePath} onActivate={() => onPlay(video.id)} />
     </article>
   );
-}
+});
