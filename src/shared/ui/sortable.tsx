@@ -1,7 +1,7 @@
 import { closestCenter, DndContext, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
 import { rectSortingStrategy, SortableContext, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import type { ReactNode } from 'react';
+import { useRef, type ReactNode } from 'react';
 import { cn } from '../lib/cn';
 
 const LONG_PRESS_MS = 250;
@@ -16,8 +16,23 @@ interface SortableScopeProps {
   children: ReactNode;
 }
 
+function isSameOrder(left: string[], right: string[]): boolean {
+  return left.length === right.length && left.every((id, index) => id === right[index]);
+}
+
+/**
+ * dnd-kit treats a new array identity as changed items: every useSortable re-renders and re-slices
+ * the list, O(n²) per render. Library pushes rebuild the ids each time, so equal ids keep the old array.
+ */
+function useStableIds(itemIds: string[]): string[] {
+  const stableIds = useRef(itemIds);
+  if (!isSameOrder(stableIds.current, itemIds)) stableIds.current = itemIds;
+  return stableIds.current;
+}
+
 /** Lets its SortableItems be reordered by long-press dragging; works for lists and grids alike. */
 export function SortableScope({ itemIds, onMove, children }: SortableScopeProps) {
+  const stableItemIds = useStableIds(itemIds);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { delay: LONG_PRESS_MS, tolerance: LONG_PRESS_TOLERANCE_PX } }),
   );
@@ -27,7 +42,7 @@ export function SortableScope({ itemIds, onMove, children }: SortableScopeProps)
 
   return (
     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-      <SortableContext items={itemIds} strategy={rectSortingStrategy}>{children}</SortableContext>
+      <SortableContext items={stableItemIds} strategy={rectSortingStrategy}>{children}</SortableContext>
     </DndContext>
   );
 }

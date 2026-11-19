@@ -2,6 +2,7 @@ import { Pencil, Play, Trash2 } from 'lucide-react';
 import { memo } from 'react';
 import type { VideoEntry } from '../../shared/contract/mudio-contract';
 import { IconButton } from '../../shared/ui/button';
+import { SortableItem } from '../../shared/ui/sortable';
 import { useMessage } from '../setting/use-message';
 import { CardCaption } from './card-caption';
 import { CardCover } from './card-cover';
@@ -23,6 +24,7 @@ interface VideoCardProps {
   onRemoveFromRecent?: (videoId: string) => void;
 }
 
+/** A sortable grid item: the drag wrapper lives inside the memo, so one changed video re-renders one card. */
 export const VideoCard = memo(function VideoCard({ video, onPlay, onEdit, onRemoveFromRecent }: VideoCardProps) {
   const libraryMessage = useMessage().library;
 
@@ -40,17 +42,19 @@ export const VideoCard = memo(function VideoCard({ video, onPlay, onEdit, onRemo
   );
 
   return (
-    <article className="group relative">
-      <CardCover hoverGlyph={PLAY_GLYPH} badge={<VideoDurationBadge video={video} />}>
-        <VideoCover video={video} />
-      </CardCover>
-      <CardCaption
-        title={video.title}
-        meta={describeVideoFile(video)}
-        tooltip={video.filePath}
-        onActivate={() => onPlay(video.id)}
-        actions={actions}
-      />
-    </article>
+    <SortableItem id={video.id}>
+      <article className="group relative">
+        <CardCover hoverGlyph={PLAY_GLYPH} badge={<VideoDurationBadge video={video} />}>
+          <VideoCover video={video} />
+        </CardCover>
+        <CardCaption
+          title={video.title}
+          meta={describeVideoFile(video)}
+          tooltip={video.filePath}
+          onActivate={() => onPlay(video.id)}
+          actions={actions}
+        />
+      </article>
+    </SortableItem>
   );
 });

@@ -4,7 +4,7 @@ import { moveItem } from '../../shared/lib/order';
 import { Button } from '../../shared/ui/button';
 import { EmptyState, ErrorBanner } from '../../shared/ui/feedback';
 import { PageHeader } from '../../shared/ui/page-header';
-import { SortableItem, SortableScope } from '../../shared/ui/sortable';
+import { SortableScope } from '../../shared/ui/sortable';
 import { useMessage } from '../setting/use-message';
 import { CardGrid } from './card-grid';
 import { ImportFolderButton } from './import-folder-button';
@@ -80,14 +80,13 @@ export function LibraryView({ collection, searchQuery, onClearSearch, onPlay }: 
         <SortableScope itemIds={collectionVideos.map(video => video.id)} onMove={moveVideo}>
           <CardGrid key={collection}>
             {collectionVideos.map(video => (
-              <SortableItem key={video.id} id={video.id}>
-                <VideoCard
-                  video={video}
-                  onPlay={onPlay}
-                  onEdit={setEditingVideoId}
-                  onRemoveFromRecent={collection === 'recent' ? removeFromRecent : undefined}
-                />
-              </SortableItem>
+              <VideoCard
+                key={video.id}
+                video={video}
+                onPlay={onPlay}
+                onEdit={setEditingVideoId}
+                onRemoveFromRecent={collection === 'recent' ? removeFromRecent : undefined}
+              />
             ))}
           </CardGrid>
         </SortableScope>

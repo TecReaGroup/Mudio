@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { mkdir, readdir, rm, stat, writeFile } from 'node:fs/promises';
-import { extname, isAbsolute, join, relative, resolve } from 'node:path';
+import { extname, join, resolve, sep } from 'node:path';
 import {
   FOLDER_SCAN_MAX_DEPTH,
   SUPPORTED_VIDEO_EXTENSIONS,
@@ -12,11 +12,14 @@ import {
 } from '../../src/shared/contract/mudio-contract';
 import { arrangeIds } from '../../src/shared/lib/order';
 import { describeError, log } from '../log/logger';
+import { mapConcurrently } from '../shared/concurrency';
 import { JsonFile } from '../shared/json-file';
 import { fileNameTitle, readVideoMetadata } from './video-metadata';
 
 const LIBRARY_FILE_NAME = 'library.json';
 const THUMBNAIL_DIRECTORY_NAME = 'thumbnail';
+// Matches libuv's default thread pool: more parallel parses would only queue behind it.
+const METADATA_READ_CONCURRENCY = 4;
 /**
  * 3: thumbnails prefer embedded cover art over a captured frame.
  * 2: titles come from embedded metadata. Version 1 titled every video by its file name.
@@ -61,9 +64,13 @@ function videoIdForPath(absolutePath: string): string {
   return createHash('sha1').update(normalizePathCase(absolutePath)).digest('hex').slice(0, 16);
 }
 
+/**
+ * Prefix match rather than path.relative: snapshot() runs this for every video × folder on each commit.
+ * Both paths are already resolved (folders via resolve(), files via join() under a resolved folder).
+ */
 function isInsideFolder(folderPath: string, filePath: string): boolean {
-  const pathFromFolder = relative(normalizePathCase(folderPath), normalizePathCase(filePath));
-  return pathFromFolder !== '' && !pathFromFolder.startsWith('..') && !isAbsolute(pathFromFolder);
+  const folderPrefix = folderPath.endsWith(sep) ? folderPath : folderPath + sep;
+  return normalizePathCase(filePath).startsWith(normalizePathCase(folderPrefix));
 }
 
 async function collectVideoFiles(directory: string, remainingDepth: number): Promise<string[]> {
@@ -258,41 +265,25 @@ export class VideoLibrary {
 
   /** Imports files and folders, returning the matching entries (existing ones included) in input order. */
   async importPaths(inputPaths: string[]): Promise<VideoEntry[]> {
-    const filePaths = (await Promise.all(inputPaths.map(expandToVideoFiles))).flat();
-    const importedById = new Map<string, VideoEntry>();
-    let addedCount = 0;
-    for (const filePath of filePaths) {
+    const filePathById = new Map<string, string>();
+    for (const filePath of (await Promise.all(inputPaths.map(expandToVideoFiles))).flat()) {
       const videoId = videoIdForPath(filePath);
-      if (importedById.has(videoId)) continue;
-      const existing = this.videos.get(videoId);
-      if (existing) {
-        importedById.set(videoId, existing);
-        continue;
-      }
-      const { size } = await stat(filePath);
-      const { title, coverBytes, durationSec } = await readVideoMetadata(filePath);
-      const entry: VideoEntry = {
-        id: videoId,
-        filePath,
-        title,
-        sizeBytes: size,
-        addedAt: new Date().toISOString(),
-        lastPlayedAt: null,
-        durationSec,
-        resumePositionSec: 0,
-        // Without cover art, the renderer's poster backfill captures a frame instead.
-        hasThumbnail: coverBytes !== null && await this.storeCover(videoId, coverBytes),
-      };
-      this.videos.set(videoId, entry);
-      importedById.set(videoId, entry);
-      addedCount += 1;
+      if (!filePathById.has(videoId)) filePathById.set(videoId, filePath);
     }
-    if (addedCount > 0) {
+    const newEntries = await mapConcurrently(
+      [...filePathById].filter(([videoId]) => !this.videos.has(videoId)),
+      METADATA_READ_CONCURRENCY,
+      ([videoId, filePath]) => this.readNewEntry(videoId, filePath),
+    );
+    // An import running alongside (e.g. the startup rescan) may have added the same file meanwhile.
+    const addedEntries = newEntries.filter(entry => !this.videos.has(entry.id));
+    for (const entry of addedEntries) this.videos.set(entry.id, entry);
+    if (addedEntries.length > 0) {
       this.applyFolderPlaylists();
-      log('info', 'Library', `Added ${addedCount} videos (${importedById.size} matched)`);
+      log('info', 'Library', `Added ${addedEntries.length} videos (${filePathById.size} matched)`);
       await this.commit();
     }
-    return [...importedById.values()];
+    return [...filePathById.keys()].flatMap(videoId => this.videos.get(videoId) ?? []);
   }
 
   async remove(videoId: string): Promise<void> {
@@ -382,6 +373,22 @@ export class VideoLibrary {
       .map(playlist => ({ ...playlist, videoIds: playlist.videoIds.filter(videoId => this.videos.has(videoId)) }))
       .filter(playlist => playlist.videoIds.length > 0);
     await Promise.all(videoIds.map(videoId => rm(this.thumbnailPath(videoId), { force: true })));
+  }
+
+  private async readNewEntry(videoId: string, filePath: string): Promise<VideoEntry> {
+    const [{ size }, { title, coverBytes, durationSec }] = await Promise.all([stat(filePath), readVideoMetadata(filePath)]);
+    return {
+      id: videoId,
+      filePath,
+      title,
+      sizeBytes: size,
+      addedAt: new Date().toISOString(),
+      lastPlayedAt: null,
+      durationSec,
+      resumePositionSec: 0,
+      // Without cover art, the renderer's poster backfill captures a frame instead.
+      hasThumbnail: coverBytes !== null && await this.storeCover(videoId, coverBytes),
+    };
   }
 
   private async storeCover(videoId: string, coverBytes: Uint8Array): Promise<boolean> {

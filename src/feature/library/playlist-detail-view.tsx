@@ -6,7 +6,7 @@ import { BackButton } from '../../shared/ui/back-button';
 import { Button } from '../../shared/ui/button';
 import { EmptyState } from '../../shared/ui/feedback';
 import { PageHeader } from '../../shared/ui/page-header';
-import { SortableItem, SortableScope } from '../../shared/ui/sortable';
+import { SortableScope } from '../../shared/ui/sortable';
 import { useMessage } from '../setting/use-message';
 import { CardGrid } from './card-grid';
 import { VideoCard } from './video-card';
@@ -61,9 +61,7 @@ export function PlaylistDetailView({ playlist, onBack, onPlayPlaylist }: Playlis
         >
           <CardGrid>
             {playlistVideos.map(video => (
-              <SortableItem key={video.id} id={video.id}>
-                <VideoCard video={video} onPlay={playFrom} onEdit={setEditingVideoId} />
-              </SortableItem>
+              <VideoCard key={video.id} video={video} onPlay={playFrom} onEdit={setEditingVideoId} />
             ))}
           </CardGrid>
         </SortableScope>
