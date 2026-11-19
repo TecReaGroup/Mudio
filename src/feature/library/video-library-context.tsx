@@ -1,12 +1,19 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { mudio } from '../../shared/api/mudio';
-import type { VideoEntry } from '../../shared/contract/mudio-contract';
+import type { LibrarySnapshot, VideoEntry } from '../../shared/contract/mudio-contract';
 import { describeError, log } from '../../shared/lib/logger';
+import { arrangeIds } from '../../shared/lib/order';
 
 interface VideoLibraryContextValue {
-  /** Newest first. Mutations go through mudio.library; this list updates from main-process pushes. */
+  /** Library order. Mutations go through mudio.library; this list updates from main-process pushes. */
   videos: VideoEntry[];
+  /** Played videos in Recent's order. */
+  recentVideos: VideoEntry[];
   findVideo: (videoId: string) => VideoEntry | undefined;
+  /** Saves a new library order, showing it before main confirms so a dropped card never snaps back. */
+  arrangeVideos: (videoIds: string[]) => void;
+  /** Same as arrangeVideos, for Recent's order. */
+  arrangeRecent: (videoIds: string[]) => void;
   /** Set when the initial load failed; the app still renders with an empty library. */
   loadError: string | null;
 }
@@ -21,40 +28,69 @@ function isSameEntry(left: VideoEntry, right: VideoEntry): boolean {
  * IPC pushes arrive as fresh copies of every entry. Keeping the previous object for unchanged entries
  * lets memoized cards and rows skip re-rendering when only one video changed (e.g. saved progress).
  */
-function reuseUnchangedEntries(previous: VideoEntry[] | null, next: VideoEntry[]): VideoEntry[] {
+function reuseUnchangedEntries(previous: LibrarySnapshot | null, next: LibrarySnapshot): LibrarySnapshot {
   if (!previous) return next;
-  const previousById = new Map(previous.map(video => [video.id, video]));
-  return next.map(video => {
-    const previousVideo = previousById.get(video.id);
-    return previousVideo && isSameEntry(previousVideo, video) ? previousVideo : video;
-  });
+  const previousById = new Map(previous.videos.map(video => [video.id, video]));
+  return {
+    ...next,
+    videos: next.videos.map(video => {
+      const previousVideo = previousById.get(video.id);
+      return previousVideo && isSameEntry(previousVideo, video) ? previousVideo : video;
+    }),
+  };
+}
+
+function arrangeLibraryVideos(snapshot: LibrarySnapshot, videoIds: string[]): LibrarySnapshot {
+  const videoById = new Map(snapshot.videos.map(video => [video.id, video]));
+  const arrangedIds = arrangeIds([...videoById.keys()], videoIds);
+  return { ...snapshot, videos: arrangedIds.map(videoId => videoById.get(videoId) as VideoEntry) };
 }
 
 export function VideoLibraryProvider({ children }: { children: ReactNode }) {
-  const [videos, setVideos] = useState<VideoEntry[] | null>(null);
+  const [snapshot, setSnapshot] = useState<LibrarySnapshot | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
-    const unsubscribe = mudio.library.onChanged(nextVideos => setVideos(current => reuseUnchangedEntries(current, nextVideos)));
+    const unsubscribe = mudio.library.onChanged(nextSnapshot => setSnapshot(current => reuseUnchangedEntries(current, nextSnapshot)));
     mudio.library.list()
       // A push that arrived during the initial fetch is newer, so keep it.
-      .then(initialVideos => setVideos(current => current ?? initialVideos))
+      .then(initialSnapshot => setSnapshot(current => current ?? initialSnapshot))
       .catch(error => {
         log('error', 'Library', `Failed to load library: ${describeError(error)}`);
         setLoadError(describeError(error));
-        setVideos(current => current ?? []);
+        setSnapshot(current => current ?? { videos: [], recentIds: [] });
       });
     return unsubscribe;
   }, []);
 
   const contextValue = useMemo(() => {
-    const videoById = new Map((videos ?? []).map(video => [video.id, video]));
-    return { videos: videos ?? [], findVideo: (videoId: string) => videoById.get(videoId), loadError };
-  }, [videos, loadError]);
+    const videos = snapshot?.videos ?? [];
+    const videoById = new Map(videos.map(video => [video.id, video]));
+    const findVideo = (videoId: string) => videoById.get(videoId);
+    // A failed save leaves the optimistic order on screen; reloading puts back what main actually holds.
+    const restoreFromMain = (error: unknown) => {
+      log('error', 'Library', `Failed to save order: ${describeError(error)}`);
+      mudio.library.list().then(setSnapshot).catch(() => undefined);
+    };
+    return {
+      videos,
+      recentVideos: (snapshot?.recentIds ?? []).map(findVideo).filter((video): video is VideoEntry => video !== undefined),
+      findVideo,
+      arrangeVideos: (videoIds: string[]) => {
+        setSnapshot(current => current && arrangeLibraryVideos(current, videoIds));
+        mudio.library.arrange(videoIds).catch(restoreFromMain);
+      },
+      arrangeRecent: (videoIds: string[]) => {
+        setSnapshot(current => current && { ...current, recentIds: arrangeIds(current.recentIds, videoIds) });
+        mudio.library.arrangeRecent(videoIds).catch(restoreFromMain);
+      },
+      loadError,
+    };
+  }, [snapshot, loadError]);
 
   // NOTE: The library is a local IPC read that finishes in milliseconds; rendering nothing until then
   // avoids a skeleton flash, which is what the "fast request" loading rule asks for.
-  if (!videos) return null;
+  if (!snapshot) return null;
   return <VideoLibraryContext.Provider value={contextValue}>{children}</VideoLibraryContext.Provider>;
 }
 

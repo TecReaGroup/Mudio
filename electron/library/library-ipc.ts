@@ -13,7 +13,7 @@ function showOpenDialogFor(event: IpcMainInvokeEvent, options: OpenDialogOptions
 export function registerLibraryIpc(library: VideoLibrary, settingStore: SettingStore): void {
   const dialogMessage = () => MESSAGES[settingStore.current().language].dialog;
 
-  ipcMain.handle(IPC_CHANNEL.libraryList, () => library.list());
+  ipcMain.handle(IPC_CHANNEL.libraryList, () => library.snapshot());
 
   ipcMain.handle(IPC_CHANNEL.libraryPickFiles, async event => {
     const message = dialogMessage();
@@ -47,6 +47,12 @@ export function registerLibraryIpc(library: VideoLibrary, settingStore: SettingS
 
   ipcMain.handle(IPC_CHANNEL.libraryRemove, (_event, videoId: unknown) =>
     library.remove(expectString(videoId, 'videoId')));
+
+  ipcMain.handle(IPC_CHANNEL.libraryArrange, (_event, videoIds: unknown) =>
+    library.arrange(expectStringArray(videoIds, 'videoIds')));
+
+  ipcMain.handle(IPC_CHANNEL.libraryArrangeRecent, (_event, videoIds: unknown) =>
+    library.arrangeRecent(expectStringArray(videoIds, 'videoIds')));
 
   ipcMain.handle(IPC_CHANNEL.libraryRecordPlayback, (_event, videoId: unknown, positionSec: unknown) =>
     library.recordPlayback(expectString(videoId, 'videoId'), expectNonNegativeNumber(positionSec, 'positionSec')));

@@ -17,7 +17,7 @@ export const VideoCard = memo(function VideoCard({ video, onPlay }: VideoCardPro
       <div className="relative">
         <VideoThumbnail
           video={video}
-          layoutClassName="rounded-card transition-shadow duration-(--duration-medium) group-hover:shadow-raised"
+          layoutClassName="rounded-card transition-shadow duration-(--duration-medium) group-hover:shadow-raised in-data-dragging:shadow-overlay"
         />
         <div aria-hidden className="absolute inset-0 flex items-center justify-center rounded-card transition-colors group-hover:bg-black/20">
           <span className="flex size-12 scale-90 items-center justify-center rounded-full bg-white/95 text-black opacity-0 shadow-raised transition-[opacity,scale] duration-(--duration-medium) group-hover:scale-100 group-hover:opacity-100">

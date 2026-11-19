@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useExternalOpen } from '../feature/launch/use-external-open';
 import { FileDropZone } from '../feature/library/file-drop-zone';
 import { useVideoLibrary, VideoLibraryProvider } from '../feature/library/video-library-context';
 import { SettingProvider } from '../feature/setting/setting-context';
-import type { LibrarySection } from '../feature/library/library-section';
+import { useMessage } from '../feature/setting/use-message';
+import { buildRecentQueue, type LibrarySection } from '../feature/library/library-section';
+import type { PlaybackRequest } from '../shared/contract/mudio-contract';
 import { HomePage } from '../page/home/home-page';
 import { usePosterBackfill } from '../feature/library/use-poster-backfill';
 import { SettingPage } from '../page/setting/setting-page';
@@ -14,37 +16,43 @@ type AppRoute =
   | { page: 'home'; section: LibrarySection }
   | { page: 'setting'; returnSection: LibrarySection };
 
-function play(videoId: string, playlistIds: string[]): void {
-  mudio.player.open({ videoId, playlistIds })
+function play(request: PlaybackRequest): void {
+  mudio.player.open(request)
     .catch(error => log('error', 'Player', `Failed to open player window: ${describeError(error)}`));
 }
 
 function AppShell() {
-  const { videos } = useVideoLibrary();
+  const { videos, recentVideos } = useVideoLibrary();
+  const recentTitle = useMessage().library.sectionTitle.recent;
   const [route, setRoute] = useState<AppRoute>({ page: 'home', section: 'all' });
 
   // Main window only: the player window shares the library and would capture the same posters twice.
   usePosterBackfill(videos);
 
-  // Several opened files form their own playlist; a single file plays ahead of the whole library.
-  const playOpened = (openedIds: string[]) => {
-    const [firstId] = openedIds;
-    const playlistIds = openedIds.length > 1
-      ? openedIds
-      : [firstId, ...videos.map(video => video.id).filter(id => id !== firstId)];
-    play(firstId, playlistIds);
-  };
+  // Read at click time, so the callbacks stay stable and memoized cards survive every library push.
+  const latestRecentVideos = useRef(recentVideos);
+  useEffect(() => {
+    latestRecentVideos.current = recentVideos;
+  });
 
-  useExternalOpen(videoId => playOpened([videoId]));
+  // Anything not started from a playlist plays in Recent, jumping to the first opened video where it already sits.
+  const playInRecent = useCallback((openedIds: string[]) => play({
+    videoId: openedIds[0],
+    playlistIds: buildRecentQueue(latestRecentVideos.current.map(video => video.id), openedIds),
+    playlistTitle: recentTitle,
+  }), [recentTitle]);
+  const playVideo = useCallback((videoId: string) => playInRecent([videoId]), [playInRecent]);
+
+  useExternalOpen(playVideo);
 
   return (
-    <FileDropZone onImported={opened => playOpened(opened.map(video => video.id))}>
+    <FileDropZone onImported={opened => playInRecent(opened.map(video => video.id))}>
       {route.page === 'home' && (
         <HomePage
           section={route.section}
           onSectionChange={section => setRoute({ page: 'home', section })}
           onOpenSetting={() => setRoute({ page: 'setting', returnSection: route.section })}
-          onPlay={play}
+          onPlay={playVideo}
         />
       )}
       {route.page === 'setting' && (

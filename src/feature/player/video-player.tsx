@@ -198,7 +198,7 @@ export function VideoPlayer({ video, onPrevious, onNext, loop, onEnded, onPlay, 
       {/* Paused-only mark, after the controls so it paints above their scrim. Pinned above the progress line's end; it only fades, never shifts. */}
       <BrandMark
         layoutClassName={cn(
-          'pointer-events-none absolute bottom-20 right-10 h-15 text-white drop-shadow-[0_1px_8px_rgb(0_0_0/0.45)] transition-opacity duration-(--duration-long)',
+          'pointer-events-none absolute bottom-20 right-10 h-15 text-foreground drop-shadow-[0_1px_8px_rgb(0_0_0/0.45)] transition-opacity duration-(--duration-long)',
           state.isPlaying ? 'opacity-0' : 'opacity-100',
         )}
       />

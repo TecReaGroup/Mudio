@@ -15,6 +15,8 @@ const mudioApi: MudioApi = {
     pickAndImportFolder: () => ipcRenderer.invoke(IPC_CHANNEL.libraryPickFolder),
     importPaths: paths => ipcRenderer.invoke(IPC_CHANNEL.libraryImportPaths, paths),
     remove: videoId => ipcRenderer.invoke(IPC_CHANNEL.libraryRemove, videoId),
+    arrange: videoIds => ipcRenderer.invoke(IPC_CHANNEL.libraryArrange, videoIds),
+    arrangeRecent: videoIds => ipcRenderer.invoke(IPC_CHANNEL.libraryArrangeRecent, videoIds),
     recordPlayback: (videoId, positionSec) => ipcRenderer.invoke(IPC_CHANNEL.libraryRecordPlayback, videoId, positionSec),
     attachPoster: (videoId, jpegBytes, durationSec) =>
       ipcRenderer.invoke(IPC_CHANNEL.libraryAttachPoster, videoId, jpegBytes, durationSec),
@@ -40,6 +42,9 @@ const mudioApi: MudioApi = {
     takePendingRequest: () => ipcRenderer.invoke(IPC_CHANNEL.playerTakePending),
     onPlay: listener => subscribe(IPC_CHANNEL.playerPlay, listener),
     returnToLibrary: () => ipcRenderer.send(IPC_CHANNEL.playerReturnToLibrary),
+  },
+  defaultPlayer: {
+    openSetting: () => ipcRenderer.invoke(IPC_CHANNEL.defaultPlayerOpenSetting),
   },
   pathForFile: file => webUtils.getPathForFile(file),
   log: (level, module, message) => ipcRenderer.send(IPC_CHANNEL.log, level, module, message),

@@ -63,6 +63,7 @@ function parsePlaybackRequest(value: unknown): PlaybackRequest {
   return {
     videoId: expectString(candidate?.videoId, 'videoId'),
     playlistIds: expectStringArray(candidate?.playlistIds, 'playlistIds'),
+    playlistTitle: expectString(candidate?.playlistTitle, 'playlistTitle'),
   };
 }
 

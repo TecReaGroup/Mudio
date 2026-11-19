@@ -1,4 +1,4 @@
-import { FolderOpen, Languages, MonitorPlay, type LucideIcon } from 'lucide-react';
+import { FolderOpen, Languages, Settings2, type LucideIcon } from 'lucide-react';
 import { useState } from 'react';
 import { SettingPanel, type SettingCategory } from '../../feature/setting/setting-panel';
 import { useMessage } from '../../feature/setting/use-message';
@@ -8,13 +8,13 @@ import { NavList } from '../../shared/ui/nav-list';
 import { TEXT_CLASS } from '../../shared/ui/text-class';
 
 const CATEGORY_NAV: readonly { category: SettingCategory; icon: LucideIcon }[] = [
-  { category: 'playback', icon: MonitorPlay },
+  { category: 'general', icon: Settings2 },
   { category: 'language', icon: Languages },
   { category: 'libraryFolder', icon: FolderOpen },
 ];
 
 export function SettingPage({ onBack }: { onBack: () => void }) {
-  const [category, setCategory] = useState<SettingCategory>('playback');
+  const [category, setCategory] = useState<SettingCategory>('general');
   const message = useMessage();
   const navEntries = CATEGORY_NAV.map(({ category: navCategory, icon }) => ({
     value: navCategory,

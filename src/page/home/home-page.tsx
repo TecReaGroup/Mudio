@@ -1,6 +1,6 @@
-import { Copy, Search, Settings, X, Youtube, type LucideIcon } from 'lucide-react';
+import { Copy, History, Search, Settings, X, Youtube, type LucideIcon } from 'lucide-react';
 import { useRef, useState } from 'react';
-import { navSectionOf, type LibraryNavSection, type LibrarySection } from '../../feature/library/library-section';
+import type { LibrarySection } from '../../feature/library/library-section';
 import { LibraryView } from '../../feature/library/library-view';
 import { PlaylistIndexView } from '../../feature/library/playlist-index-view';
 import { useMessage } from '../../feature/setting/use-message';
@@ -9,8 +9,9 @@ import { IconButton } from '../../shared/ui/button';
 import { INPUT_FOCUS_CLASS } from '../../shared/ui/control-class';
 import { NavList } from '../../shared/ui/nav-list';
 
-const LIBRARY_NAV: readonly { section: LibraryNavSection; icon: LucideIcon }[] = [
+const LIBRARY_NAV: readonly { section: LibrarySection; icon: LucideIcon }[] = [
   { section: 'all', icon: Youtube },
+  { section: 'recent', icon: History },
   { section: 'playlist', icon: Copy },
 ];
 
@@ -18,7 +19,7 @@ interface HomePageProps {
   section: LibrarySection;
   onSectionChange: (section: LibrarySection) => void;
   onOpenSetting: () => void;
-  onPlay: (videoId: string, playlistIds: string[]) => void;
+  onPlay: (videoId: string) => void;
 }
 
 export function HomePage({ section, onSectionChange, onOpenSetting, onPlay }: HomePageProps) {
@@ -66,7 +67,7 @@ export function HomePage({ section, onSectionChange, onOpenSetting, onPlay }: Ho
   return (
     <BrowseShell
       topBarCenter={searchBox}
-      sidebar={<NavList label={message.library.navTitle} entries={navEntries} currentValue={navSectionOf(section)} onSelect={onSectionChange} />}
+      sidebar={<NavList label={message.library.navTitle} entries={navEntries} currentValue={section} onSelect={onSectionChange} />}
       sidebarFooter={(
         <IconButton size="lg" label={message.common.setting} layoutClassName="self-start" onClick={onOpenSetting}>
           <Settings strokeWidth={1.75} />
@@ -74,12 +75,11 @@ export function HomePage({ section, onSectionChange, onOpenSetting, onPlay }: Ho
       )}
     >
       {section === 'playlist' ? (
-        <PlaylistIndexView onOpenPlaylist={onSectionChange} />
+        <PlaylistIndexView />
       ) : (
         <LibraryView
           collection={section}
           searchQuery={searchQuery}
-          onBack={section === 'all' ? undefined : () => onSectionChange('playlist')}
           onClearSearch={clearSearch}
           onPlay={onPlay}
         />

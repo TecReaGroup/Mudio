@@ -28,7 +28,14 @@ export interface VideoEntry {
   hasThumbnail: boolean;
 }
 
-export const LANGUAGES = ['zh-CN', 'en'] as const;
+export interface LibrarySnapshot {
+  /** In the order the user arranged; newly imported videos are appended. */
+  videos: VideoEntry[];
+  /** Played videos in Recent's order, which the user arranges too; a first play is appended. */
+  recentIds: string[];
+}
+
+export const LANGUAGES =['zh-CN', 'en'] as const;
 export type Language = (typeof LANGUAGES)[number];
 
 /** What happens when a video ends: stop, replay it, or move on to the next one in the playlist. */
@@ -48,6 +55,8 @@ export interface PlaybackRequest {
   videoId: string;
   /** Snapshotted when playback starts so the order stays stable while "recent" reshuffles. */
   playlistIds: string[];
+  /** Resolved by the sender, which knows what the queue is: Recent, or the playlist it was started from. */
+  playlistTitle: string;
 }
 
 export const LOG_LEVELS = ['debug', 'info', 'warn', 'error'] as const;
@@ -59,6 +68,8 @@ export const IPC_CHANNEL = {
   libraryPickFolder: 'library:pick-folder',
   libraryImportPaths: 'library:import-paths',
   libraryRemove: 'library:remove',
+  libraryArrange: 'library:arrange',
+  libraryArrangeRecent: 'library:arrange-recent',
   libraryRecordPlayback: 'library:record-playback',
   libraryAttachPoster: 'library:attach-poster',
   libraryChanged: 'library:changed',
@@ -75,6 +86,7 @@ export const IPC_CHANNEL = {
   playerTakePending: 'player:take-pending',
   playerPlay: 'player:play',
   playerReturnToLibrary: 'player:return-to-library',
+  defaultPlayerOpenSetting: 'default-player:open-setting',
   log: 'log:write',
 } as const;
 
@@ -83,7 +95,7 @@ export type Unsubscribe = () => void;
 export interface MudioApi {
   platform: string;
   library: {
-    list(): Promise<VideoEntry[]>;
+    list(): Promise<LibrarySnapshot>;
     /** Shows a file picker; resolves to the picked videos (empty when cancelled). */
     pickAndImportFiles(): Promise<VideoEntry[]>;
     /** Shows a folder picker and imports every video found inside it. */
@@ -91,9 +103,13 @@ export interface MudioApi {
     /** Accepts files and folders; unsupported files are skipped. */
     importPaths(paths: string[]): Promise<VideoEntry[]>;
     remove(videoId: string): Promise<void>;
+    /** Saves the library order; see arrangeIds for how unknown or missing ids are handled. */
+    arrange(videoIds: string[]): Promise<void>;
+    /** Saves Recent's order; ids of videos never played are ignored. */
+    arrangeRecent(videoIds: string[]): Promise<void>;
     recordPlayback(videoId: string, positionSec: number): Promise<void>;
     attachPoster(videoId: string, jpegBytes: Uint8Array, durationSec: number | null): Promise<void>;
-    onChanged(listener: (videos: VideoEntry[]) => void): Unsubscribe;
+    onChanged(listener: (snapshot: LibrarySnapshot) => void): Unsubscribe;
   };
   /** Folders the library keeps in sync with: scanned on startup and on demand. */
   libraryFolder: {
@@ -122,6 +138,10 @@ export interface MudioApi {
     onPlay(listener: (request: PlaybackRequest) => void): Unsubscribe;
     /** Closes the player window and brings the library window to the front. */
     returnToLibrary(): void;
+  };
+  /** Windows only: apps cannot claim file types themselves, so this opens Settings at Mudio's default-app page. */
+  defaultPlayer: {
+    openSetting(): Promise<void>;
   };
   pathForFile(file: File): string;
   log(level: LogLevel, module: string, message: string): void;

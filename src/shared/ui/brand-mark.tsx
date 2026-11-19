@@ -1,9 +1,10 @@
 import { useId } from 'react';
 
-// Facets are shaded toward black rather than faded, so the mark stays solid over video.
-const LIT_FACET_FILL = 'color-mix(in srgb, currentColor 76%, black)';
-const UPPER_FACET_FILL = 'color-mix(in srgb, currentColor 62%, black)';
-const LOWER_FACET_FILL = 'color-mix(in srgb, currentColor 36%, black)';
+// Facets are shaded toward the scheme canvas rather than faded, so the mark stays solid over video
+// while keeping the palette's warm ink tint; pure black turned the low facets into cold, muddy grey.
+const LIT_FACET_FILL = 'currentColor';
+const UPPER_FACET_FILL = 'color-mix(in srgb, currentColor 78%, var(--canvas))';
+const LOWER_FACET_FILL = 'color-mix(in srgb, currentColor 56%, var(--canvas))';
 // Triangle outline with each outer corner eased by a quadratic curve 30 units back along both edges.
 const ROUNDED_OUTLINE = 'M362 320 Q362 290 388 305 L726 497 Q752 512 726 527 L388 719 Q362 734 362 704 Z';
 

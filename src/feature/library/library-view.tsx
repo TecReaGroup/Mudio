@@ -1,13 +1,14 @@
-import { ChevronLeft } from 'lucide-react';
-import { useCallback, useDeferredValue, useEffect, useMemo, useRef } from 'react';
+import { useDeferredValue, useMemo } from 'react';
 import { SUPPORTED_VIDEO_EXTENSIONS } from '../../shared/contract/mudio-contract';
-import { Button, IconButton } from '../../shared/ui/button';
+import { moveItem } from '../../shared/lib/order';
+import { Button } from '../../shared/ui/button';
 import { EmptyState, ErrorBanner } from '../../shared/ui/feedback';
 import { PageHeader } from '../../shared/ui/page-header';
+import { SortableItem, SortableScope } from '../../shared/ui/sortable';
 import { useMessage } from '../setting/use-message';
 import { CardGrid } from './card-grid';
 import { ImportFolderButton } from './import-folder-button';
-import { selectCollectionVideos, type VideoCollection } from './library-section';
+import type { VideoCollection } from './library-section';
 import { VideoCard } from './video-card';
 import { useVideoLibrary } from './video-library-context';
 
@@ -16,34 +17,28 @@ const SUPPORTED_FORMAT_HINT = SUPPORTED_VIDEO_EXTENSIONS.map(extension => `.${ex
 interface LibraryViewProps {
   collection: VideoCollection;
   searchQuery: string;
-  /** Shows a back button before the title, for collections opened from another page. */
-  onBack?: () => void;
   onClearSearch: () => void;
-  /** playlistIds is the order the player should follow. */
-  onPlay: (videoId: string, playlistIds: string[]) => void;
+  onPlay: (videoId: string) => void;
 }
 
-export function LibraryView({ collection, searchQuery, onBack, onClearSearch, onPlay }: LibraryViewProps) {
-  const { videos, loadError } = useVideoLibrary();
+export function LibraryView({ collection, searchQuery, onClearSearch, onPlay }: LibraryViewProps) {
+  const { videos, recentVideos, arrangeVideos, arrangeRecent, loadError } = useVideoLibrary();
   const message = useMessage();
   const libraryMessage = message.library;
+  const orderedVideos = collection === 'all' ? videos : recentVideos;
   // The input updates immediately; filtering a large grid follows at lower priority so typing never stalls.
   const trimmedQuery = useDeferredValue(searchQuery).trim();
   const normalizedQuery = trimmedQuery.toLowerCase();
   const collectionVideos = useMemo(
-    () => selectCollectionVideos(videos, collection).filter(video => video.title.toLowerCase().includes(normalizedQuery)),
-    [videos, collection, normalizedQuery],
+    () => orderedVideos.filter(video => video.title.toLowerCase().includes(normalizedQuery)),
+    [orderedVideos, normalizedQuery],
   );
 
-  // Read at click time, so the callback stays stable and memoized cards survive every library push.
-  const latestCollectionVideos = useRef(collectionVideos);
-  useEffect(() => {
-    latestCollectionVideos.current = collectionVideos;
-  });
-  const playFromCollection = useCallback(
-    (videoId: string) => onPlay(videoId, latestCollectionVideos.current.map(video => video.id)),
-    [onPlay],
-  );
+  // Moves within the whole collection, so dragging inside search results keeps hidden videos in place.
+  const moveVideo = (movedId: string, targetId: string) => {
+    const arrange = collection === 'all' ? arrangeVideos : arrangeRecent;
+    arrange(moveItem(orderedVideos.map(video => video.id), movedId, targetId));
+  };
 
   const renderEmptyState = () => {
     if (trimmedQuery) {
@@ -73,23 +68,20 @@ export function LibraryView({ collection, searchQuery, onBack, onClearSearch, on
       <PageHeader
         title={libraryMessage.sectionTitle[collection]}
         description={libraryMessage.videoCount(collectionVideos.length)}
-        leading={onBack && (
-          <IconButton label={message.common.back} onClick={onBack}>
-            <ChevronLeft />
-          </IconButton>
-        )}
       />
       {collectionVideos.length === 0 ? (
         <div className="flex-1">{renderEmptyState()}</div>
       ) : (
         // Keyed so switching collections replays the fade-in.
-        <CardGrid key={collection}>
-          {collectionVideos.map(video => (
-            <li key={video.id}>
-              <VideoCard video={video} onPlay={playFromCollection} />
-            </li>
-          ))}
-        </CardGrid>
+        <SortableScope itemIds={collectionVideos.map(video => video.id)} onMove={moveVideo}>
+          <CardGrid key={collection}>
+            {collectionVideos.map(video => (
+              <SortableItem key={video.id} id={video.id}>
+                <VideoCard video={video} onPlay={onPlay} />
+              </SortableItem>
+            ))}
+          </CardGrid>
+        </SortableScope>
       )}
     </>
   );

@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react';
 import type { Language } from '../../shared/contract/mudio-contract';
+import { mudio } from '../../shared/api/mudio';
+import { Button } from '../../shared/ui/button';
 import { SURFACE_CLASS } from '../../shared/ui/control-class';
 import { PageHeader } from '../../shared/ui/page-header';
 import { SegmentedControl } from '../../shared/ui/segmented-control';
@@ -15,9 +17,9 @@ const LANGUAGE_OPTIONS: readonly { value: Language; label: string }[] = [
   { value: 'en', label: 'English' },
 ];
 
-export type SettingCategory = 'playback' | 'language' | 'libraryFolder';
+export type SettingCategory = 'general' | 'language' | 'libraryFolder';
 
-function PlaybackSetting() {
+function ResumePlaybackSetting() {
   const { setting, updateSetting } = useSetting();
   const message = useMessage().setting;
 
@@ -29,6 +31,27 @@ function PlaybackSetting() {
         onCheckedChange={resumePlayback => updateSetting({ resumePlayback })}
       />
     </SettingRow>
+  );
+}
+
+function DefaultPlayerSetting() {
+  const message = useMessage().setting;
+
+  return (
+    <SettingRow title={message.defaultPlayer} description={message.defaultPlayerDescription}>
+      <Button layoutClassName="shrink-0" onClick={() => void mudio.defaultPlayer.openSetting()}>
+        {message.defaultPlayerOpen}
+      </Button>
+    </SettingRow>
+  );
+}
+
+function GeneralSetting() {
+  return (
+    <>
+      <ResumePlaybackSetting />
+      {mudio.platform === 'win32' && <DefaultPlayerSetting />}
+    </>
   );
 }
 
@@ -49,7 +72,7 @@ function LanguageSetting() {
 }
 
 const CATEGORY_CONTENT: Record<SettingCategory, () => ReactNode> = {
-  playback: PlaybackSetting,
+  general: GeneralSetting,
   language: LanguageSetting,
   libraryFolder: LibraryFolderSetting,
 };

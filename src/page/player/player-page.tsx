@@ -11,11 +11,13 @@ import { WindowTitleBar } from '../../shared/ui/window-title-bar';
 interface PlayerPageProps {
   videoId: string;
   playlistIds: string[];
+  playlistTitle: string;
   onSelectVideo: (videoId: string) => void;
+  onMoveVideo: (movedId: string, targetId: string) => void;
 }
 
 /** Fills the player window: the root never scrolls; only the playlist panel does. */
-export function PlayerPage({ videoId, playlistIds, onSelectVideo }: PlayerPageProps) {
+export function PlayerPage({ videoId, playlistIds, playlistTitle, onSelectVideo, onMoveVideo }: PlayerPageProps) {
   const { findVideo } = useVideoLibrary();
   const { setting } = useSetting();
   const video = findVideo(videoId);
@@ -59,10 +61,12 @@ export function PlayerPage({ videoId, playlistIds, onSelectVideo }: PlayerPagePr
           )}
         </main>
         <PlaylistPanel
+          title={playlistTitle}
           videos={playlist}
           currentVideoId={videoId}
           isCurrentPlaying={playingVideoId === videoId}
           onSelect={onSelectVideo}
+          onMove={onMoveVideo}
         />
       </div>
     </div>

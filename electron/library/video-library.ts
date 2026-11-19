@@ -1,7 +1,13 @@
 import { createHash } from 'node:crypto';
 import { mkdir, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import { basename, extname, isAbsolute, join, relative, resolve } from 'node:path';
-import { FOLDER_SCAN_MAX_DEPTH, SUPPORTED_VIDEO_EXTENSIONS, type VideoEntry } from '../../src/shared/contract/mudio-contract';
+import {
+  FOLDER_SCAN_MAX_DEPTH,
+  SUPPORTED_VIDEO_EXTENSIONS,
+  type LibrarySnapshot,
+  type VideoEntry,
+} from '../../src/shared/contract/mudio-contract';
+import { arrangeIds } from '../../src/shared/lib/order';
 import { describeError, log } from '../log/logger';
 import { JsonFile } from '../shared/json-file';
 
@@ -10,9 +16,20 @@ const THUMBNAIL_DIRECTORY_NAME = 'thumbnail';
 
 interface LibraryDocument {
   version: 1;
+  /** Stored in library order. */
   videos: VideoEntry[];
   /** Absent in documents written before library folders existed. */
   folders?: string[];
+  /** Absent in documents written before Recent could be arranged. */
+  recentIds?: string[];
+}
+
+/** Recent's order before the user could arrange it: most recently played first. */
+function recentIdsByPlayTime(videos: VideoEntry[]): string[] {
+  return videos
+    .filter((video): video is VideoEntry & { lastPlayedAt: string } => video.lastPlayedAt !== null)
+    .sort((left, right) => right.lastPlayedAt.localeCompare(left.lastPlayedAt))
+    .map(video => video.id);
 }
 
 export function isSupportedVideoPath(filePath: string): boolean {
@@ -82,24 +99,29 @@ export class VideoLibrary {
   private constructor(
     private readonly document: JsonFile<LibraryDocument>,
     private readonly thumbnailDirectory: string,
+    /** Insertion order is the library order. */
     private readonly videos: Map<string, VideoEntry>,
     /** Folders rescanned on startup; removing one also removes the videos found under it. */
     private folders: string[],
-    private readonly onChange: (videos: VideoEntry[]) => void,
+    /** Always a subset of the video ids. */
+    private recentIds: string[],
+    private readonly onChange: (snapshot: LibrarySnapshot) => void,
   ) {}
 
-  static async open(dataDirectory: string, onChange: (videos: VideoEntry[]) => void): Promise<VideoLibrary> {
+  static async open(dataDirectory: string, onChange: (snapshot: LibrarySnapshot) => void): Promise<VideoLibrary> {
     const document = new JsonFile<LibraryDocument>(join(dataDirectory, LIBRARY_FILE_NAME));
-    const { videos, folders = [] } = await document.read({ version: 1, videos: [] });
+    const { videos, folders = [], recentIds } = await document.read({ version: 1, videos: [] });
     const thumbnailDirectory = join(dataDirectory, THUMBNAIL_DIRECTORY_NAME);
     await mkdir(thumbnailDirectory, { recursive: true });
     log('info', 'Library', `Loaded ${videos.length} videos from ${folders.length} library folders`);
-    return new VideoLibrary(document, thumbnailDirectory, new Map(videos.map(video => [video.id, video])), folders, onChange);
+    const videoById = new Map(videos.map(video => [video.id, video]));
+    // A hand-edited document may list ids twice or name removed videos.
+    const validRecentIds = recentIds ? [...new Set(recentIds)].filter(id => videoById.has(id)) : recentIdsByPlayTime(videos);
+    return new VideoLibrary(document, thumbnailDirectory, videoById, folders, validRecentIds, onChange);
   }
 
-  /** Newest first. */
-  list(): VideoEntry[] {
-    return [...this.videos.values()].sort((left, right) => right.addedAt.localeCompare(left.addedAt));
+  snapshot(): LibrarySnapshot {
+    return { videos: this.list(), recentIds: this.recentIds };
   }
 
   find(videoId: string): VideoEntry | undefined {
@@ -196,9 +218,24 @@ export class VideoLibrary {
   }
 
   async remove(videoId: string): Promise<void> {
-    if (!this.videos.delete(videoId)) return;
-    await rm(this.thumbnailPath(videoId), { force: true });
+    if (!this.videos.has(videoId)) return;
+    await this.dropVideos([videoId]);
     log('info', 'Library', `Removed video ${videoId}`);
+    await this.commit();
+  }
+
+  async arrange(videoIds: string[]): Promise<void> {
+    const arrangedEntries = arrangeIds([...this.videos.keys()], videoIds)
+      .map(videoId => [videoId, this.videos.get(videoId) as VideoEntry] as const);
+    this.videos.clear();
+    for (const [videoId, video] of arrangedEntries) this.videos.set(videoId, video);
+    log('info', 'Library', `Arranged ${arrangedEntries.length} videos`);
+    await this.commit();
+  }
+
+  async arrangeRecent(videoIds: string[]): Promise<void> {
+    this.recentIds = arrangeIds(this.recentIds, videoIds);
+    log('info', 'Library', `Arranged ${this.recentIds.length} recent videos`);
     await this.commit();
   }
 
@@ -206,6 +243,7 @@ export class VideoLibrary {
     const video = this.videos.get(videoId);
     if (!video) return;
     this.videos.set(videoId, { ...video, resumePositionSec: positionSec, lastPlayedAt: new Date().toISOString() });
+    if (!this.recentIds.includes(videoId)) this.recentIds = [...this.recentIds, videoId];
     await this.commit();
   }
 
@@ -220,16 +258,21 @@ export class VideoLibrary {
   /** Removes entries and their thumbnails without publishing; callers commit once afterwards. */
   private async dropVideos(videoIds: string[]): Promise<void> {
     for (const videoId of videoIds) this.videos.delete(videoId);
+    this.recentIds = this.recentIds.filter(videoId => this.videos.has(videoId));
     await Promise.all(videoIds.map(videoId => rm(this.thumbnailPath(videoId), { force: true })));
   }
 
-  /** Publishes the video list to every window, then saves. */
+  private list(): VideoEntry[] {
+    return [...this.videos.values()];
+  }
+
+  /** Publishes the library to every window, then saves. */
   private async commit(): Promise<void> {
-    this.onChange(this.list());
+    this.onChange(this.snapshot());
     await this.persist();
   }
 
   private persist(): Promise<void> {
-    return this.document.write({ version: 1, videos: this.list(), folders: this.folders });
+    return this.document.write({ version: 1, videos: this.list(), folders: this.folders, recentIds: this.recentIds });
   }
 }

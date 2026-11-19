@@ -4,7 +4,7 @@ import { cn } from '../lib/cn';
 import { FOCUS_RING_CLASS } from './control-class';
 
 const NAV_ITEM_CLASS = cn(
-  'no-drag flex h-10 w-full cursor-pointer items-center gap-3 rounded-control px-3 text-control text-secondary transition-colors',
+  'no-drag flex h-10.5 w-full cursor-pointer items-center gap-3 rounded-control px-3 text-body text-secondary transition-colors',
   'hover:bg-hover hover:text-foreground',
   'aria-[current=page]:bg-inverse aria-[current=page]:font-medium aria-[current=page]:text-on-inverse',
   FOCUS_RING_CLASS,

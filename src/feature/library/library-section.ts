@@ -1,21 +1,11 @@
-import type { VideoEntry } from '../../shared/contract/mudio-contract';
-
-/** Where the library is browsing. Playlists open from the 'playlist' index, so they sit under its nav entry. */
-export type LibrarySection = 'all' | 'playlist' | Playlist;
-export type LibraryNavSection = 'all' | 'playlist';
+/** Where the library is browsing. */
+export type LibrarySection = 'all' | 'recent' | 'playlist';
 /** A section that lists videos, as opposed to the playlist index. */
-export type VideoCollection = 'all' | Playlist;
+export type VideoCollection = 'all' | 'recent';
 
-export const PLAYLISTS = ['recent'] as const;
-export type Playlist = typeof PLAYLISTS[number];
-
-export function navSectionOf(section: LibrarySection): LibraryNavSection {
-  return section === 'all' || section === 'playlist' ? section : 'playlist';
-}
-
-export function selectCollectionVideos(videos: VideoEntry[], collection: VideoCollection): VideoEntry[] {
-  if (collection === 'all') return videos;
-  return videos
-    .filter((video): video is VideoEntry & { lastPlayedAt: string } => video.lastPlayedAt !== null)
-    .sort((left, right) => right.lastPlayedAt.localeCompare(left.lastPlayedAt));
+/** Recent in its current order, with opened videos that are not in it yet appended at the end. */
+export function buildRecentQueue(recentIds: string[], openedIds: string[]): string[] {
+  const recent = new Set(recentIds);
+  const newIds = [...new Set(openedIds)].filter(id => !recent.has(id));
+  return [...recentIds, ...newIds];
 }

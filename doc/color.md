@@ -16,7 +16,7 @@ The palette is dominated by a **warm grey canvas, near-black ink, and soft ivory
 | **Ivory panel** | `#f1f0ec` | `--color-panel` | surface | Light media mats, capability panels, and testimonial cards (keeps low contrast against the canvas). |
 | **Charcoal ink** | `#1d1d1d` | `--color-ink` | text, border, accent, link | Readable body/label text, outlined label borders, and small symbols. |
 | **Light bloom** | `#ffffff` | `--color-white` | accent, text | Diffused highlights inside color artwork and light captions over dark imagery. |
-| **Soft grey rule** | `#cdcdc9`<br>*Alpha recipe: `rgba(111, 111, 111, 0.2)`* | `--color-rule` | border | `#cdcdc9` is the visual result of the alpha recipe over `#e5e4e0`. Use the `rgba` recipe for separators and faint edges so they adapt naturally to their backing. |
+| **Soft grey rule** | `#cdcdc9` *Alpha recipe: `rgba(111, 111, 111, 0.2)`* | `--color-rule` | border | `#cdcdc9` is the visual result of the alpha recipe over `#e5e4e0`. Use the `rgba` recipe for separators and faint edges so they adapt naturally to their backing. |
 | **Orbital grey** | `#bfbebe` | `--color-orbit` | border | Fine dashed circular outlines sitting behind page content. |
 
 ---
@@ -61,31 +61,31 @@ The palette is dominated by a **warm grey canvas, near-black ink, and soft ivory
 
 ## Use this color palette for the video player
 
-### 1. Overall Color Strategy
+### Overall Color Strategy
 
 A cinematic, high-contrast dark palette built almost entirely on **near-black (`#101010`)** and **warm white (`#fffdf9`)**. There are no alternating solid-color bands, colored UI cards, or filled buttons. All chromatic color is strictly confined to **optical refraction and atmospheric lighting**—subtle blue-cyan-violet halos fading into darkness and tiny spectral rainbow slivers along glass edges—while photographic color remains local to portrait frames.
 
 ---
 
-### 2. Neutral Palette
+### Neutral Palette
 
 | Name | Value | Token | Roles | Usage |
 | :--- | :--- | :--- | :--- | :--- |
 | **Warm white** | `#fffdf9` | `--color-text` | text, border, link, action | All primary text, monochrome proof marks, small icons, navigation contact outline, and inline action underlines (used instead of stark blue-white). |
 | **Near-black canvas** | `#101010` | `--color-canvas` | background, surface | Continuous, unbroken page field behind typography, atmospheric artwork, and the footer. |
-| **Dim warm rule** | `#403f3f`<br>*Alpha recipe: `rgba(255, 253, 249, 0.2)`* | `--color-rule` | border | Visual result of warm white at 20% opacity over the canvas. Use the `rgba` recipe for subtle bottom separators on service modules. |
+| **Dim warm rule** | `#403f3f`<*Alpha recipe: `rgba(255, 253, 249, 0.2)`* | `--color-rule` | border | Visual result of warm white at 20% opacity over the canvas. Use the `rgba` recipe for subtle bottom separators on service modules. |
 
 ---
 
-### 3. Accent Palette
+### Accent Palette
 
 | Name | Value | Token | Roles | Usage |
 | :--- | :--- | :--- | :--- | :--- |
-| **Slate blue rule** | `#495764`<br>*Alpha recipe: `rgba(111, 135, 156, 0.6)`* | `--color-cool-rule` | border, accent | Visual result of slate `#6f879c` at 60% opacity over the canvas. Use the `rgba` recipe strictly as an edge/border color for proof-row and accordion separators—never as a panel fill. |
+| **Slate blue rule** | `#495764`*Alpha recipe: `rgba(111, 135, 156, 0.6)`* | `--color-cool-rule` | border, accent | Visual result of slate `#6f879c` at 60% opacity over the canvas. Use the `rgba` recipe strictly as an edge/border color for proof-row and accordion separators—never as a panel fill. |
 
 ---
 
-### 4. Optical & Atmospheric Color Recipes (Artwork Only)
+### Optical & Atmospheric Color Recipes (Artwork Only)
 
 * **Refractive Modular Sculpture**:
   * **Faces**: Near-canvas dark (`#101010`) at low opacity so underlying darkness keeps foreground text legible.
@@ -100,7 +100,7 @@ A cinematic, high-contrast dark palette built almost entirely on **near-black (`
 
 ---
 
-### 5. Color Don'ts
+### Color Don'ts
 
 * **Do not use stark blue-white**: Always use warm white (`#fffdf9`) for text, icons, and hairlines.
 * **Do not promote the slate accent into a surface**: Keep `#495764` (`rgba(111, 135, 156, 0.6)`) strictly as a hairline separator, never as a large blue panel or card fill.

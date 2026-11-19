@@ -1,5 +1,6 @@
 import { app, BrowserWindow } from 'electron';
 import { IPC_CHANNEL } from '../src/shared/contract/mudio-contract';
+import { registerDefaultPlayerIpc } from './launch/default-player';
 import { ExternalFileOpener, registerLaunchIpc, videoPathsFromArgv } from './launch/external-file-opener';
 import { registerLibraryIpc } from './library/library-ipc';
 import { VideoLibrary } from './library/video-library';
@@ -51,7 +52,7 @@ function startApp(): void {
     .then(async () => {
       log('info', 'App', `Starting Mudio ${app.getVersion()}`);
       const dataDirectory = app.getPath('userData');
-      const library = await VideoLibrary.open(dataDirectory, videos => broadcast(IPC_CHANNEL.libraryChanged, videos));
+      const library = await VideoLibrary.open(dataDirectory, snapshot => broadcast(IPC_CHANNEL.libraryChanged, snapshot));
       // Every window holds its own copy of the settings; a stale copy would overwrite newer changes on save.
       const settingStore = await SettingStore.open(dataDirectory, setting => broadcast(IPC_CHANNEL.settingChanged, setting));
       opener = new ExternalFileOpener(library, () => mainWindow);
@@ -60,6 +61,7 @@ function startApp(): void {
       registerLibraryIpc(library, settingStore);
       registerSettingIpc(settingStore);
       registerLaunchIpc(opener);
+      registerDefaultPlayerIpc();
       registerPlayerIpc(new PlayerWindow(showLibrary));
       registerLogIpc();
 
