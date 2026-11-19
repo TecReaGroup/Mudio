@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { mudio } from '../../shared/api/mudio';
-import type { LibrarySnapshot, Playlist, VideoEdit, VideoEntry } from '../../shared/contract/mudio-contract';
+import type { LibraryFolder, LibrarySnapshot, Playlist, VideoEdit, VideoEntry } from '../../shared/contract/mudio-contract';
 import { describeError, log } from '../../shared/lib/logger';
 import { arrangeIds } from '../../shared/lib/order';
 
@@ -10,6 +10,7 @@ interface VideoLibraryContextValue {
   /** Played videos in Recent's order. */
   recentVideos: VideoEntry[];
   playlists: Playlist[];
+  folders: LibraryFolder[];
   findVideo: (videoId: string) => VideoEntry | undefined;
   /** Saves a new library order, showing it before main confirms so a dropped card never snaps back. */
   arrangeVideos: (videoIds: string[]) => void;
@@ -76,7 +77,7 @@ export function VideoLibraryProvider({ children }: { children: ReactNode }) {
       .catch(error => {
         log('error', 'Library', `Failed to load library: ${describeError(error)}`);
         setLoadError(describeError(error));
-        setSnapshot(current => current ?? { videos: [], recentIds: [], playlists: [] });
+        setSnapshot(current => current ?? { videos: [], recentIds: [], playlists: [], folders: [] });
       });
     return unsubscribe;
   }, []);
@@ -94,6 +95,7 @@ export function VideoLibraryProvider({ children }: { children: ReactNode }) {
       videos,
       recentVideos: (snapshot?.recentIds ?? []).map(findVideo).filter((video): video is VideoEntry => video !== undefined),
       playlists: snapshot?.playlists ?? [],
+      folders: snapshot?.folders ?? [],
       findVideo,
       arrangeVideos: (videoIds: string[]) => {
         setSnapshot(current => current && arrangeLibraryVideos(current, videoIds));

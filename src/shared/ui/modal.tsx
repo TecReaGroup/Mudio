@@ -1,5 +1,6 @@
 import { TriangleAlert, X } from 'lucide-react';
 import { useEffect, useId, useRef, type ReactNode } from 'react';
+import { cn } from '../lib/cn';
 import { Button, IconButton } from './button';
 import { TEXT_CLASS } from './text-class';
 
@@ -10,6 +11,8 @@ interface ModalProps {
   onClose: () => void;
   /** Leading visual beside the title, e.g. a danger icon. */
   icon?: ReactNode;
+  /** Layout only, e.g. a wider width or visible overflow for an anchored dropdown. */
+  layoutClassName?: string;
   children: ReactNode;
 }
 
@@ -17,7 +20,7 @@ interface ModalProps {
  * Native `<dialog>` modal. Render it only while open: mounting opens it,
  * so form state always starts fresh. Escape, backdrop click and the close button all call onClose.
  */
-export function Modal({ title, description, closeLabel, onClose, icon, children }: ModalProps) {
+export function Modal({ title, description, closeLabel, onClose, icon, layoutClassName, children }: ModalProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const titleId = useId();
   const descriptionId = useId();
@@ -40,7 +43,10 @@ export function Modal({ title, description, closeLabel, onClose, icon, children 
       onClick={event => {
         if (event.target === event.currentTarget) onClose();
       }}
-      className="m-auto w-[min(26rem,calc(100vw-2rem))] animate-pop-in rounded-dialog border border-line bg-surface p-0 text-foreground shadow-overlay backdrop:animate-overlay-in backdrop:bg-black/40"
+      className={cn(
+        'm-auto w-[min(26rem,calc(100vw-2rem))] animate-pop-in rounded-dialog border border-line bg-surface p-0 text-foreground shadow-overlay backdrop:animate-overlay-in backdrop:bg-black/40',
+        layoutClassName,
+      )}
     >
       <div className="flex gap-3 p-5">
         {icon}

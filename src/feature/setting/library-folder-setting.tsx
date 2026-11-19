@@ -1,36 +1,31 @@
-import { Folder, FolderPlus, RefreshCw, Trash2 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { Folder, FolderPlus, Pencil, RefreshCw, Trash2 } from 'lucide-react';
+import { useState } from 'react';
 import { mudio } from '../../shared/api/mudio';
-import { FOLDER_SCAN_MAX_DEPTH } from '../../shared/contract/mudio-contract';
+import { FOLDER_SCAN_MAX_DEPTH, type LibraryFolder } from '../../shared/contract/mudio-contract';
 import { describeError, log } from '../../shared/lib/logger';
 import { Button, IconButton } from '../../shared/ui/button';
 import { Spinner } from '../../shared/ui/feedback';
 import { ConfirmDeleteDialog } from '../../shared/ui/modal';
 import { TEXT_CLASS } from '../../shared/ui/text-class';
+import { useVideoLibrary } from '../library/video-library-context';
+import { FolderEditDialog } from './folder-edit-dialog';
 import { SettingRow } from './setting-row';
 import { useMessage } from './use-message';
 
-/** Folders the library keeps in sync with. Scanning runs in the main process; new videos arrive via library pushes. */
+/** Folders the library keeps in sync with. Scanning runs in the main process; folders and videos arrive via library pushes. */
 export function LibraryFolderSetting() {
   const message = useMessage();
   const folderMessage = message.setting.libraryFolder;
-  // null until loaded, so the empty hint never flashes before the real list.
-  const [folders, setFolders] = useState<string[] | null>(null);
+  const { folders } = useVideoLibrary();
   const [isAdding, setIsAdding] = useState(false);
   const [isRescanning, setIsRescanning] = useState(false);
+  const [folderToEdit, setFolderToEdit] = useState<LibraryFolder | null>(null);
   const [folderToRemove, setFolderToRemove] = useState<string | null>(null);
   const isBusy = isAdding || isRescanning;
-
-  useEffect(() => {
-    mudio.libraryFolder.list()
-      .then(setFolders)
-      .catch(error => log('error', 'LibraryFolder', `Failed to load folders: ${describeError(error)}`));
-  }, []);
 
   const addFolder = () => {
     setIsAdding(true);
     mudio.libraryFolder.pickAndAdd()
-      .then(setFolders)
       .catch(error => log('error', 'LibraryFolder', `Add folder failed: ${describeError(error)}`))
       .finally(() => setIsAdding(false));
   };
@@ -44,11 +39,9 @@ export function LibraryFolderSetting() {
 
   const removeFolder = (folderPath: string) => {
     mudio.libraryFolder.remove(folderPath)
-      .then(setFolders)
       .catch(error => log('error', 'LibraryFolder', `Remove folder failed: ${describeError(error)}`));
   };
 
-  if (!folders) return null;
   return (
     <>
       <SettingRow title={folderMessage.title} description={folderMessage.description(FOLDER_SCAN_MAX_DEPTH)}>
@@ -67,17 +60,21 @@ export function LibraryFolderSetting() {
         <p className={`px-5 py-4 ${TEXT_CLASS.hint}`}>{folderMessage.empty}</p>
       ) : (
         <ul className="divide-y divide-line">
-          {folders.map(folderPath => (
-            <li key={folderPath} className="flex items-center gap-3 py-2.5 pl-5 pr-3">
+          {folders.map(folder => (
+            <li key={folder.path} className="flex items-center gap-3 py-2.5 pl-5 pr-3">
               <Folder aria-hidden className="size-4 shrink-0 text-subtle" />
-              <span title={folderPath} className={`min-w-0 flex-1 truncate ${TEXT_CLASS.body}`}>{folderPath}</span>
-              <IconButton tone="quietDanger" label={folderMessage.remove} onClick={() => setFolderToRemove(folderPath)}>
+              <span title={folder.path} className={`min-w-0 flex-1 truncate ${TEXT_CLASS.body}`}>{folder.path}</span>
+              <IconButton label={folderMessage.edit} onClick={() => setFolderToEdit(folder)}>
+                <Pencil />
+              </IconButton>
+              <IconButton tone="quietDanger" label={folderMessage.remove} onClick={() => setFolderToRemove(folder.path)}>
                 <Trash2 />
               </IconButton>
             </li>
           ))}
         </ul>
       )}
+      {folderToEdit && <FolderEditDialog folder={folderToEdit} onClose={() => setFolderToEdit(null)} />}
       {folderToRemove && (
         <ConfirmDeleteDialog
           title={folderMessage.removeConfirmTitle}

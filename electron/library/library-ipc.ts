@@ -5,15 +5,19 @@ import { expectBytes, expectNonNegativeNumber, expectString, expectStringArray, 
 import type { SettingStore } from '../setting/setting-store';
 import type { VideoLibrary } from './video-library';
 
-/** Playlist titles come back trimmed, non-blank and unique, so the library can match them as-is. */
-function parseVideoEdit(value: unknown): VideoEdit {
-  const candidate = value as Partial<VideoEdit> | null;
-  const playlistTitles = expectStringArray(candidate?.playlistTitles, 'playlistTitles')
+/** Titles come back trimmed, non-blank and unique, so the library can match them as-is. */
+function parsePlaylistTitles(value: unknown): string[] {
+  const playlistTitles = expectStringArray(value, 'playlistTitles')
     .map(title => title.trim())
     .filter(title => title.length > 0);
+  return [...new Set(playlistTitles)];
+}
+
+function parseVideoEdit(value: unknown): VideoEdit {
+  const candidate = value as Partial<VideoEdit> | null;
   return {
     title: expectText(candidate?.title, 'title'),
-    playlistTitles: [...new Set(playlistTitles)],
+    playlistTitles: parsePlaylistTitles(candidate?.playlistTitles),
   };
 }
 
@@ -42,15 +46,16 @@ export function registerLibraryIpc(library: VideoLibrary, settingStore: SettingS
     return selection.canceled ? [] : library.importPaths(selection.filePaths);
   });
 
-  ipcMain.handle(IPC_CHANNEL.libraryFolderList, () => library.listFolders());
-
   ipcMain.handle(IPC_CHANNEL.libraryFolderPickAndAdd, async event => {
     const selection = await showOpenDialogFor(event, { title: dialogMessage().addLibraryFolder, properties: ['openDirectory'] });
-    return selection.canceled ? library.listFolders() : library.addFolder(selection.filePaths[0]);
+    if (!selection.canceled) await library.addFolder(selection.filePaths[0]);
   });
 
   ipcMain.handle(IPC_CHANNEL.libraryFolderRemove, (_event, folderPath: unknown) =>
     library.removeFolder(expectString(folderPath, 'folderPath')));
+
+  ipcMain.handle(IPC_CHANNEL.libraryFolderEditPlaylists, (_event, folderPath: unknown, playlistTitles: unknown) =>
+    library.editFolderPlaylists(expectString(folderPath, 'folderPath'), parsePlaylistTitles(playlistTitles)));
 
   ipcMain.handle(IPC_CHANNEL.libraryFolderRescan, () => library.rescanFolders());
 

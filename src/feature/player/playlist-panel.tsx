@@ -55,8 +55,7 @@ interface PlaylistItemProps {
 
 const PlaylistItem = memo(function PlaylistItem({ video, isCurrent, isPlaying, onSelect, onRemove, ref }: PlaylistItemProps) {
   const message = useMessage();
-  // The playing video cannot be removed from under the player.
-  const canRemove = onRemove !== undefined && !isCurrent;
+  const canRemove = onRemove !== undefined;
   return (
     <SortableItem id={video.id} layoutClassName="group relative">
       <button
@@ -153,7 +152,8 @@ export function PlaylistPanel({ title, videos, currentVideoId, isCurrentPlaying,
                 // Only the current row shows playback state; the rest stay untouched on play/pause.
                 isPlaying={isCurrent && isCurrentPlaying}
                 onSelect={onSelect}
-                onRemove={onRemove}
+                // The last video stays: removing it would leave the player with nothing to switch to.
+                onRemove={videos.length > 1 ? onRemove : undefined}
               />
             );
           })}

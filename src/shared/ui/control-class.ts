@@ -10,6 +10,13 @@ export const INPUT_FOCUS_CLASS =
 export const TEXT_FIELD_CLASS =
   `rounded-control border border-transparent bg-sunken px-3 text-control text-foreground outline-none placeholder:text-subtle ${INPUT_FOCUS_CLASS}`;
 
+/**
+ * TEXT_FIELD_CLASS for fields inside a dialog: a sunken well reads too dark on the dialog surface,
+ * so these are outlined on the surface color instead.
+ */
+export const DIALOG_TEXT_FIELD_CLASS =
+  `rounded-control border border-line bg-surface px-3 text-control text-foreground outline-none placeholder:text-subtle hover:border-line-strong ${INPUT_FOCUS_CLASS}`;
+
 /** Card / panel shell: content surface, hairline border, resting shadow. */
 export const SURFACE_CLASS = 'rounded-card border border-line bg-surface shadow-rest';
 

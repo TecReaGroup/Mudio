@@ -10,6 +10,7 @@ import { WindowTitleBar } from '../../shared/ui/window-title-bar';
 
 interface PlayerPageProps {
   videoId: string;
+  autoPlay: boolean;
   playlistIds: string[];
   playlistTitle: string;
   onSelectVideo: (videoId: string) => void;
@@ -19,7 +20,7 @@ interface PlayerPageProps {
 }
 
 /** Fills the player window: the root never scrolls; only the playlist panel does. */
-export function PlayerPage({ videoId, playlistIds, playlistTitle, onSelectVideo, onMoveVideo, onRemoveVideo }: PlayerPageProps) {
+export function PlayerPage({ videoId, autoPlay, playlistIds, playlistTitle, onSelectVideo, onMoveVideo, onRemoveVideo }: PlayerPageProps) {
   const { findVideo } = useVideoLibrary();
   const { setting } = useSetting();
   const video = findVideo(videoId);
@@ -51,6 +52,7 @@ export function PlayerPage({ videoId, playlistIds, playlistTitle, onSelectVideo,
               key={video.id}
               layoutClassName="flex-1"
               video={video}
+              autoPlay={autoPlay}
               onPrevious={previousVideo && (() => onSelectVideo(previousVideo.id))}
               onNext={nextVideo && (() => onSelectVideo(nextVideo.id))}
               loop={setting.playbackOrder === 'repeat-one'}

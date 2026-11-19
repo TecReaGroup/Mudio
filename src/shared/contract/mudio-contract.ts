@@ -37,12 +37,22 @@ export interface Playlist {
   videoIds: string[];
 }
 
+export interface LibraryFolder {
+  path: string;
+  /** Every video under the folder stays in these playlists; only the folder can take it out. */
+  playlistTitles: string[];
+  /** Library videos found under the folder, in library order. */
+  videoIds: string[];
+}
+
 export interface LibrarySnapshot {
   /** In the order the user arranged; newly imported videos are appended. */
   videos: VideoEntry[];
   /** Played videos in Recent's order, which the user arranges too; a first play is appended. */
   recentIds: string[];
   playlists: Playlist[];
+  /** Folders the library keeps in sync with. */
+  folders: LibraryFolder[];
 }
 
 export interface VideoEdit {
@@ -94,9 +104,9 @@ export const IPC_CHANNEL = {
   libraryRecordPlayback: 'library:record-playback',
   libraryAttachPoster: 'library:attach-poster',
   libraryChanged: 'library:changed',
-  libraryFolderList: 'library-folder:list',
   libraryFolderPickAndAdd: 'library-folder:pick-and-add',
   libraryFolderRemove: 'library-folder:remove',
+  libraryFolderEditPlaylists: 'library-folder:edit-playlists',
   libraryFolderRescan: 'library-folder:rescan',
   settingLoad: 'setting:load',
   settingSave: 'setting:save',
@@ -139,12 +149,14 @@ export interface MudioApi {
     onChanged(listener: (snapshot: LibrarySnapshot) => void): Unsubscribe;
   };
   /** Folders the library keeps in sync with: scanned on startup and on demand. */
+  /** Folders arrive with the library snapshot; changes here are pushed back through library.onChanged. */
   libraryFolder: {
-    list(): Promise<string[]>;
-    /** Shows a folder picker, remembers the folder and imports its videos; resolves to the updated folders. */
-    pickAndAdd(): Promise<string[]>;
+    /** Shows a folder picker, remembers the folder and imports its videos. */
+    pickAndAdd(): Promise<void>;
     /** Forgets the folder and removes its videos from the library; files on disk are untouched. */
-    remove(folderPath: string): Promise<string[]>;
+    remove(folderPath: string): Promise<void>;
+    /** Sets exactly which playlists hold every video under the folder; titles no playlist has yet create one. */
+    editPlaylists(folderPath: string, playlistTitles: string[]): Promise<void>;
     rescan(): Promise<void>;
   };
   setting: {

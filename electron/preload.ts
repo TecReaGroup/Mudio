@@ -26,9 +26,10 @@ const mudioApi: MudioApi = {
     onChanged: listener => subscribe(IPC_CHANNEL.libraryChanged, listener),
   },
   libraryFolder: {
-    list: () => ipcRenderer.invoke(IPC_CHANNEL.libraryFolderList),
     pickAndAdd: () => ipcRenderer.invoke(IPC_CHANNEL.libraryFolderPickAndAdd),
     remove: folderPath => ipcRenderer.invoke(IPC_CHANNEL.libraryFolderRemove, folderPath),
+    editPlaylists: (folderPath, playlistTitles) =>
+      ipcRenderer.invoke(IPC_CHANNEL.libraryFolderEditPlaylists, folderPath, playlistTitles),
     rescan: () => ipcRenderer.invoke(IPC_CHANNEL.libraryFolderRescan),
   },
   setting: {

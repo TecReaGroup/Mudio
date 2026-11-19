@@ -4,6 +4,7 @@ import { extname, isAbsolute, join, relative, resolve } from 'node:path';
 import {
   FOLDER_SCAN_MAX_DEPTH,
   SUPPORTED_VIDEO_EXTENSIONS,
+  type LibraryFolder,
   type LibrarySnapshot,
   type Playlist,
   type VideoEdit,
@@ -12,19 +13,25 @@ import {
 import { arrangeIds } from '../../src/shared/lib/order';
 import { describeError, log } from '../log/logger';
 import { JsonFile } from '../shared/json-file';
-import { fileNameTitle, readVideoTitle } from './video-title';
+import { fileNameTitle, readVideoMetadata } from './video-metadata';
 
 const LIBRARY_FILE_NAME = 'library.json';
 const THUMBNAIL_DIRECTORY_NAME = 'thumbnail';
-/** 2: titles come from embedded metadata. Version 1 titled every video by its file name. */
-const LIBRARY_DOCUMENT_VERSION = 2;
+/**
+ * 3: thumbnails prefer embedded cover art over a captured frame.
+ * 2: titles come from embedded metadata. Version 1 titled every video by its file name.
+ */
+const LIBRARY_DOCUMENT_VERSION = 3;
+
+/** A library folder as stored; its video ids are derived from file paths on every snapshot. */
+type FolderBinding = Omit<LibraryFolder, 'videoIds'>;
 
 interface LibraryDocument {
-  version: 1 | typeof LIBRARY_DOCUMENT_VERSION;
+  version: 1 | 2 | typeof LIBRARY_DOCUMENT_VERSION;
   /** Stored in library order. */
   videos: VideoEntry[];
-  /** Absent in documents written before library folders existed. */
-  folders?: string[];
+  /** Absent in documents written before library folders existed; plain paths predate folder playlists. */
+  folders?: (string | FolderBinding)[];
   /** Absent in documents written before Recent could be arranged. */
   recentIds?: string[];
   /** Absent in documents written before playlists existed. */
@@ -107,6 +114,20 @@ function assignToPlaylists(playlists: Playlist[], videoId: string, playlistTitle
   return [...reassigned, ...created].filter(playlist => playlist.videoIds.length > 0);
 }
 
+/** Appends the videos the titled playlist lacks, creating the playlist if needed. */
+function addToPlaylist(playlists: Playlist[], title: string, videoIds: string[]): Playlist[] {
+  const target = playlists.find(playlist => playlist.title === title);
+  if (!target) return videoIds.length > 0 ? [...playlists, { id: randomUUID(), title, videoIds }] : playlists;
+  const memberIds = new Set(target.videoIds);
+  const missingIds = videoIds.filter(videoId => !memberIds.has(videoId));
+  if (missingIds.length === 0) return playlists;
+  return playlists.map(playlist => playlist === target ? { ...playlist, videoIds: [...playlist.videoIds, ...missingIds] } : playlist);
+}
+
+function isSameFolder(left: string, right: string): boolean {
+  return normalizePathCase(left) === normalizePathCase(right);
+}
+
 async function expandToVideoFiles(inputPath: string): Promise<string[]> {
   const absolutePath = resolve(inputPath);
   try {
@@ -125,8 +146,11 @@ export class VideoLibrary {
     private readonly thumbnailDirectory: string,
     /** Insertion order is the library order. */
     private readonly videos: Map<string, VideoEntry>,
-    /** Folders rescanned on startup; removing one also removes the videos found under it. */
-    private folders: string[],
+    /**
+     * Folders rescanned on startup; removing one also removes the videos found under it.
+     * Invariant: every video under a folder is in each of that folder's playlists.
+     */
+    private folders: FolderBinding[],
     /** Always a subset of the video ids. */
     private recentIds: string[],
     /** Never empty; their video ids are always a subset of the library's. */
@@ -147,60 +171,76 @@ export class VideoLibrary {
     const validPlaylists = playlists
       .map(playlist => ({ ...playlist, videoIds: [...new Set(playlist.videoIds)].filter(id => videoById.has(id)) }))
       .filter(playlist => playlist.videoIds.length > 0);
-    const library = new VideoLibrary(document, thumbnailDirectory, videoById, folders, validRecentIds, validPlaylists, onChange);
+    const folderBindings = folders.map(folder => typeof folder === 'string' ? { path: folder, playlistTitles: [] } : folder);
+    const library = new VideoLibrary(document, thumbnailDirectory, videoById, folderBindings, validRecentIds, validPlaylists, onChange);
+    library.applyFolderPlaylists();
     if (version < LIBRARY_DOCUMENT_VERSION) {
-      library.adoptEmbeddedTitles()
-        .catch(error => log('error', 'Library', `Embedded title migration failed: ${describeError(error)}`));
+      library.adoptEmbeddedMetadata(version)
+        .catch(error => log('error', 'Library', `Embedded metadata migration failed: ${describeError(error)}`));
     }
     return library;
   }
 
   snapshot(): LibrarySnapshot {
-    return { videos: this.list(), recentIds: this.recentIds, playlists: this.playlists };
+    const folders = this.folders.map(folder => ({ ...folder, videoIds: this.folderVideoIds(folder.path) }));
+    return { videos: this.list(), recentIds: this.recentIds, playlists: this.playlists, folders };
   }
 
   find(videoId: string): VideoEntry | undefined {
     return this.videos.get(videoId);
   }
 
-  listFolders(): string[] {
-    return this.folders;
-  }
-
   /** Remembers the folder and imports its videos; adding a folder already in the list only rescans it. */
-  async addFolder(folderPath: string): Promise<string[]> {
+  async addFolder(folderPath: string): Promise<void> {
     const absolutePath = resolve(folderPath);
-    const isKnown = this.folders.some(folder => normalizePathCase(folder) === normalizePathCase(absolutePath));
+    const isKnown = this.folders.some(folder => isSameFolder(folder.path, absolutePath));
     if (!isKnown) {
-      this.folders = [...this.folders, absolutePath];
+      this.folders = [...this.folders, { path: absolutePath, playlistTitles: [] }];
       log('info', 'Library', `Added library folder (${this.folders.length} total)`);
     }
     await this.importPaths([absolutePath]);
-    await this.persist();
-    return this.folders;
+    await this.commit();
   }
 
   /** Forgets the folder and drops its videos, except those still covered by another library folder. */
-  async removeFolder(folderPath: string): Promise<string[]> {
-    const remainingFolders = this.folders.filter(folder => normalizePathCase(folder) !== normalizePathCase(folderPath));
-    if (remainingFolders.length === this.folders.length) return this.folders;
+  async removeFolder(folderPath: string): Promise<void> {
+    const remainingFolders = this.folders.filter(folder => !isSameFolder(folder.path, folderPath));
+    if (remainingFolders.length === this.folders.length) return;
     this.folders = remainingFolders;
 
     const orphanedIds = [...this.videos.values()]
       .filter(video => isInsideFolder(folderPath, video.filePath)
-        && !remainingFolders.some(folder => isInsideFolder(folder, video.filePath)))
+        && !remainingFolders.some(folder => isInsideFolder(folder.path, video.filePath)))
       .map(video => video.id);
     await this.dropVideos(orphanedIds);
     log('info', 'Library', `Removed library folder and ${orphanedIds.length} of its videos`);
     await this.commit();
-    return this.folders;
+  }
+
+  /** Puts every video under the folder in exactly the titled playlists, creating missing ones and dropping any left empty. */
+  async editFolderPlaylists(folderPath: string, playlistTitles: string[]): Promise<void> {
+    const target = this.folders.find(folder => isSameFolder(folder.path, folderPath));
+    if (!target) return;
+    const droppedTitles = new Set(target.playlistTitles.filter(title => !playlistTitles.includes(title)));
+    this.folders = this.folders.map(folder => folder === target ? { ...folder, playlistTitles } : folder);
+
+    const leavingIds = new Set(this.folderVideoIds(target.path));
+    this.playlists = this.playlists
+      .map(playlist => droppedTitles.has(playlist.title)
+        ? { ...playlist, videoIds: playlist.videoIds.filter(videoId => !leavingIds.has(videoId)) }
+        : playlist)
+      .filter(playlist => playlist.videoIds.length > 0);
+    // Puts back videos that another folder still holds in a dropped playlist.
+    this.applyFolderPlaylists();
+    log('info', 'Library', `Edited library folder playlists: ${playlistTitles.length} kept, ${droppedTitles.size} dropped`);
+    await this.commit();
   }
 
   /** Syncs the library with its folders: drops videos whose files are gone, then imports new ones. */
   async rescanFolders(): Promise<void> {
     if (this.folders.length === 0) return;
     const candidates = [...this.videos.values()]
-      .filter(video => this.folders.some(folder => isInsideFolder(folder, video.filePath)));
+      .filter(video => this.folders.some(folder => isInsideFolder(folder.path, video.filePath)));
     const goneIds = (await Promise.all(candidates.map(async video => (await isFileGone(video.filePath)) ? video.id : null)))
       .filter((videoId): videoId is string => videoId !== null);
     if (goneIds.length > 0) {
@@ -208,7 +248,7 @@ export class VideoLibrary {
       await this.commit();
     }
 
-    const matched = await this.importPaths(this.folders);
+    const matched = await this.importPaths(this.folders.map(folder => folder.path));
     log('info', 'Library', `Rescanned ${this.folders.length} library folders: ${matched.length} videos found, ${goneIds.length} missing removed`);
   }
 
@@ -230,22 +270,25 @@ export class VideoLibrary {
         continue;
       }
       const { size } = await stat(filePath);
+      const { title, coverBytes, durationSec } = await readVideoMetadata(filePath);
       const entry: VideoEntry = {
         id: videoId,
         filePath,
-        title: await readVideoTitle(filePath),
+        title,
         sizeBytes: size,
         addedAt: new Date().toISOString(),
         lastPlayedAt: null,
-        durationSec: null,
+        durationSec,
         resumePositionSec: 0,
-        hasThumbnail: false,
+        // Without cover art, the renderer's poster backfill captures a frame instead.
+        hasThumbnail: coverBytes !== null && await this.storeCover(videoId, coverBytes),
       };
       this.videos.set(videoId, entry);
       importedById.set(videoId, entry);
       addedCount += 1;
     }
     if (addedCount > 0) {
+      this.applyFolderPlaylists();
       log('info', 'Library', `Added ${addedCount} videos (${importedById.size} matched)`);
       await this.commit();
     }
@@ -284,9 +327,11 @@ export class VideoLibrary {
   async editVideo(videoId: string, edit: VideoEdit): Promise<void> {
     const video = this.videos.get(videoId);
     if (!video) return;
+    // A folder's playlists hold the video regardless of what the edit asks for.
+    const playlistTitles = [...new Set([...edit.playlistTitles, ...this.folderPlaylistTitles(video.filePath)])];
     this.videos.set(videoId, { ...video, title: edit.title });
-    this.playlists = assignToPlaylists(this.playlists, videoId, edit.playlistTitles);
-    log('info', 'Library', `Edited video ${videoId}: in ${edit.playlistTitles.length} playlists`);
+    this.playlists = assignToPlaylists(this.playlists, videoId, playlistTitles);
+    log('info', 'Library', `Edited video ${videoId}: in ${playlistTitles.length} playlists`);
     await this.commit();
   }
 
@@ -313,6 +358,22 @@ export class VideoLibrary {
     await this.commit();
   }
 
+  /** Restores the folder invariant without publishing; callers commit once afterwards. */
+  private applyFolderPlaylists(): void {
+    for (const folder of this.folders) {
+      const videoIds = this.folderVideoIds(folder.path);
+      for (const title of folder.playlistTitles) this.playlists = addToPlaylist(this.playlists, title, videoIds);
+    }
+  }
+
+  private folderVideoIds(folderPath: string): string[] {
+    return this.list().filter(video => isInsideFolder(folderPath, video.filePath)).map(video => video.id);
+  }
+
+  private folderPlaylistTitles(filePath: string): string[] {
+    return this.folders.filter(folder => isInsideFolder(folder.path, filePath)).flatMap(folder => folder.playlistTitles);
+  }
+
   /** Removes entries and their thumbnails without publishing; callers commit once afterwards. */
   private async dropVideos(videoIds: string[]): Promise<void> {
     for (const videoId of videoIds) this.videos.delete(videoId);
@@ -323,20 +384,52 @@ export class VideoLibrary {
     await Promise.all(videoIds.map(videoId => rm(this.thumbnailPath(videoId), { force: true })));
   }
 
+  private async storeCover(videoId: string, coverBytes: Uint8Array): Promise<boolean> {
+    try {
+      await writeFile(this.thumbnailPath(videoId), coverBytes);
+      return true;
+    } catch (error) {
+      log('warn', 'Library', `Cover skipped for ${videoId}: ${describeError(error)}`);
+      return false;
+    }
+  }
+
+  /** Runs once, in the background, on a document older than the current version; steps run in order. */
+  private async adoptEmbeddedMetadata(version: LibraryDocument['version']): Promise<void> {
+    if (version < 2) await this.adoptEmbeddedTitles();
+    await this.adoptEmbeddedCovers();
+  }
+
   /**
-   * Runs once, in the background, on a version 1 document. Files are probed one at a time to keep
-   * file handles bounded on large libraries; a title the user already changed is left alone.
+   * Files are probed one at a time to keep file handles bounded on large libraries;
+   * a title the user already changed is left alone.
    */
   private async adoptEmbeddedTitles(): Promise<void> {
     let adoptedCount = 0;
     for (const { id, filePath } of this.list()) {
-      const title = await readVideoTitle(filePath);
+      const { title } = await readVideoMetadata(filePath);
       const video = this.videos.get(id);
       if (!video || video.title !== fileNameTitle(filePath) || title === video.title) continue;
       this.videos.set(id, { ...video, title });
       adoptedCount += 1;
     }
     log('info', 'Library', `Adopted ${adoptedCount} embedded titles`);
+    await this.commit();
+  }
+
+  /** Replaces captured frames with cover art; videos without any keep their frame. */
+  private async adoptEmbeddedCovers(): Promise<void> {
+    let adoptedCount = 0;
+    for (const { id, filePath } of this.list()) {
+      const { coverBytes, durationSec } = await readVideoMetadata(filePath);
+      if (!coverBytes || !this.videos.has(id) || !(await this.storeCover(id, coverBytes))) continue;
+      // Re-read after the awaits: playback may have updated the entry meanwhile.
+      const video = this.videos.get(id);
+      if (!video) continue;
+      this.videos.set(id, { ...video, hasThumbnail: true, durationSec: video.durationSec ?? durationSec });
+      adoptedCount += 1;
+    }
+    log('info', 'Library', `Adopted ${adoptedCount} embedded covers`);
     await this.commit();
   }
 

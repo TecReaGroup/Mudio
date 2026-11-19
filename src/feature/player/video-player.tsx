@@ -28,6 +28,8 @@ function clamp(value: number, min: number, max: number): number {
 
 interface VideoPlayerProps {
   video: VideoEntry;
+  /** Native `autoPlay`, read once per mount since the player is keyed by video. */
+  autoPlay: boolean;
   onPrevious?: () => void;
   onNext?: () => void;
   /** Native `loop`: the video restarts at its end and `onEnded` never fires. */
@@ -39,7 +41,7 @@ interface VideoPlayerProps {
 }
 
 /** Must be keyed by video id: each mount plays exactly one video. */
-export function VideoPlayer({ video, onPrevious, onNext, loop, onEnded, onPlay, onPause, layoutClassName }: VideoPlayerProps) {
+export function VideoPlayer({ video, autoPlay, onPrevious, onNext, loop, onEnded, onPlay, onPause, layoutClassName }: VideoPlayerProps) {
   const { setting } = useSetting();
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -150,7 +152,7 @@ export function VideoPlayer({ video, onPrevious, onNext, loop, onEnded, onPlay, 
       <video
         ref={videoRef}
         src={videoSourceUrl(video.id)}
-        autoPlay
+        autoPlay={autoPlay}
         loop={loop}
         className="size-full object-contain"
         {...pressHandlers}

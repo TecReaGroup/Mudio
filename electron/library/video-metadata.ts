@@ -1,23 +1,31 @@
 import { basename, extname } from 'node:path';
-import { parseFile } from 'music-metadata';
+import { parseFile, selectCover } from 'music-metadata';
 import { describeError, log } from '../log/logger';
+
+export interface VideoMetadata {
+  /** The embedded title (MP4 ©nam, Matroska TITLE), or the file name when absent. */
+  title: string;
+  /** Embedded cover art (MP4 covr, Matroska cover attachment), or null when the file has none. */
+  coverBytes: Uint8Array | null;
+  /** From the container header; null when it does not say. */
+  durationSec: number | null;
+}
 
 export function fileNameTitle(filePath: string): string {
   return basename(filePath, extname(filePath));
 }
 
-/** Title tag embedded in the container (MP4 ©nam, Matroska TITLE), or null when absent or unreadable. */
-async function readEmbeddedTitle(filePath: string): Promise<string | null> {
+/** One parse for everything the library reads from a file; unreadable metadata falls back to the file name. */
+export async function readVideoMetadata(filePath: string): Promise<VideoMetadata> {
   try {
-    const { common } = await parseFile(filePath, { duration: false, skipCovers: true });
-    return common.title?.trim() || null;
+    const { common, format } = await parseFile(filePath, { duration: false });
+    return {
+      title: common.title?.trim() || fileNameTitle(filePath),
+      coverBytes: selectCover(common.picture)?.data ?? null,
+      durationSec: format.duration !== undefined && Number.isFinite(format.duration) ? format.duration : null,
+    };
   } catch (error) {
     log('warn', 'Library', `Skip unreadable metadata: ${describeError(error)}`);
-    return null;
+    return { title: fileNameTitle(filePath), coverBytes: null, durationSec: null };
   }
-}
-
-/** The embedded title when the file has one, otherwise the file name. */
-export async function readVideoTitle(filePath: string): Promise<string> {
-  return (await readEmbeddedTitle(filePath)) ?? fileNameTitle(filePath);
 }
