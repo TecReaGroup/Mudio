@@ -1,12 +1,45 @@
-import { AudioLines } from 'lucide-react';
+import { AudioLines, Repeat, Repeat1, type LucideIcon } from 'lucide-react';
 import { useEffect, useRef } from 'react';
-import type { VideoEntry } from '../../shared/contract/mudio-contract';
+import type { PlaybackOrder, VideoEntry } from '../../shared/contract/mudio-contract';
+import { IconButton } from '../../shared/ui/button';
 import { cn } from '../../shared/lib/cn';
 import { FOCUS_RING_CLASS } from '../../shared/ui/control-class';
 import { TEXT_CLASS } from '../../shared/ui/text-class';
 import { describeVideoFile } from '../library/video-file-meta';
 import { VideoThumbnail } from '../library/video-thumbnail';
+import { useSetting } from '../setting/setting-context';
 import { useMessage } from '../setting/use-message';
+import { CircleFadingPlay } from './circle-fading-play-icon';
+
+const PLAYBACK_ORDER_ICON: Record<PlaybackOrder, LucideIcon> = {
+  'play-once': CircleFadingPlay,
+  'repeat-one': Repeat1,
+  sequential: Repeat,
+};
+
+const NEXT_PLAYBACK_ORDER: Record<PlaybackOrder, PlaybackOrder> = {
+  sequential: 'repeat-one',
+  'repeat-one': 'play-once',
+  'play-once': 'sequential',
+};
+
+/** Cycles through the orders on each click; the icon and tooltip name the current one. */
+function PlaybackOrderButton() {
+  const { setting, updateSetting } = useSetting();
+  const message = useMessage().player;
+  const order = setting.playbackOrder;
+  const Icon = PLAYBACK_ORDER_ICON[order];
+
+  return (
+    <IconButton
+      size="lg"
+      label={`${message.playbackOrder}: ${message.playbackOrderName[order]}`}
+      onClick={() => updateSetting({ playbackOrder: NEXT_PLAYBACK_ORDER[order] })}
+    >
+      <Icon aria-hidden />
+    </IconButton>
+  );
+}
 
 interface PlaylistPanelProps {
   videos: VideoEntry[];
@@ -29,11 +62,14 @@ export function PlaylistPanel({ videos, currentVideoId, onSelect }: PlaylistPane
       aria-label={message.player.playlist}
       className="flex w-80 shrink-0 flex-col overflow-hidden border-l border-line bg-surface xl:w-96"
     >
-      <header className="mx-5 flex shrink-0 items-baseline justify-between gap-3 border-b border-line pb-4 pt-5">
+      <header className="mx-5 flex shrink-0 items-center justify-between gap-3 border-b border-line pb-4 pt-5">
         <h2 className={TEXT_CLASS.dialogTitle}>{message.player.playlist}</h2>
-        <span className="text-control tabular-nums text-subtle">
-          <span className="font-semibold text-foreground">{currentIndex + 1}</span> / {videos.length}
-        </span>
+        <div className="flex items-center gap-2">
+          <PlaybackOrderButton />
+          <span className="text-control tabular-nums text-subtle">
+            <span className="font-semibold text-foreground">{currentIndex + 1}</span> / {videos.length}
+          </span>
+        </div>
       </header>
       <ol className="scrollbar-subtle min-h-0 flex-1 space-y-1 overflow-y-auto p-3">
         {videos.map((video, index) => {

@@ -27,7 +27,7 @@ export const BUTTON_TONE_CLASS = {
   danger: 'bg-danger text-on-danger shadow-rest hover:bg-danger/90',
   inverse: 'text-on-inverse/70 hover:bg-on-inverse/10 hover:text-on-inverse',
   /** Controls drawn over video, which is always dark. */
-  media: 'text-white/90 hover:bg-white/15 hover:text-white',
+  media: 'text-white/90 hover:bg-white/15 hover:text-white aria-pressed:bg-white/15 aria-pressed:text-white',
   mediaPrimary: 'bg-white text-black shadow-raised hover:bg-white/90',
 } as const;
 

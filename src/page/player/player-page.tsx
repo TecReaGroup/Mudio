@@ -36,10 +36,10 @@ export function PlayerPage({ videoId, playlistIds, onSelectVideo, onBack }: Play
   }, []);
 
   return (
-    <div className="scheme-dark flex h-full flex-col bg-canvas text-foreground">
+    <div className="scheme-dark flex h-full flex-col bg-surface text-foreground">
       <BackTitleBar backLabel={message.common.back} title={message.player.pageTitle} onBack={onBack} />
       <div className="flex min-h-0 flex-1">
-        <main className="flex min-w-0 flex-1 bg-black">
+        <main className="flex min-w-0 flex-1 bg-canvas">
           {video && (
             <VideoPlayer
               key={video.id}
@@ -47,8 +47,9 @@ export function PlayerPage({ videoId, playlistIds, onSelectVideo, onBack }: Play
               video={video}
               onPrevious={previousVideo && (() => onSelectVideo(previousVideo.id))}
               onNext={nextVideo && (() => onSelectVideo(nextVideo.id))}
+              loop={setting.playbackOrder === 'repeat-one'}
               onEnded={() => {
-                if (setting.autoplayNext && nextVideo) onSelectVideo(nextVideo.id);
+                if (setting.playbackOrder === 'sequential' && nextVideo) onSelectVideo(nextVideo.id);
               }}
             />
           )}

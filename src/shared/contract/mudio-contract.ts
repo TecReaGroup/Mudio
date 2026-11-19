@@ -28,9 +28,13 @@ export interface VideoEntry {
 export const LANGUAGES = ['zh-CN', 'en'] as const;
 export type Language = (typeof LANGUAGES)[number];
 
+/** What happens when a video ends: stop, replay it, or move on to the next one in the playlist. */
+export const PLAYBACK_ORDERS = ['play-once', 'repeat-one', 'sequential'] as const;
+export type PlaybackOrder = (typeof PLAYBACK_ORDERS)[number];
+
 export interface AppSetting {
   language: Language;
-  autoplayNext: boolean;
+  playbackOrder: PlaybackOrder;
   resumePlayback: boolean;
 }
 

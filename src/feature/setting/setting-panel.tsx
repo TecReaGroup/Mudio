@@ -33,22 +33,13 @@ function PlaybackSetting() {
   const message = useMessage().setting;
 
   return (
-    <>
-      <SettingRow title={message.autoplayNext} description={message.autoplayNextDescription}>
-        <Switch
-          label={message.autoplayNext}
-          checked={setting.autoplayNext}
-          onCheckedChange={autoplayNext => updateSetting({ autoplayNext })}
-        />
-      </SettingRow>
-      <SettingRow title={message.resumePlayback} description={message.resumePlaybackDescription}>
-        <Switch
-          label={message.resumePlayback}
-          checked={setting.resumePlayback}
-          onCheckedChange={resumePlayback => updateSetting({ resumePlayback })}
-        />
-      </SettingRow>
-    </>
+    <SettingRow title={message.resumePlayback} description={message.resumePlaybackDescription}>
+      <Switch
+        label={message.resumePlayback}
+        checked={setting.resumePlayback}
+        onCheckedChange={resumePlayback => updateSetting({ resumePlayback })}
+      />
+    </SettingRow>
   );
 }
 

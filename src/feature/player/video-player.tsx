@@ -1,9 +1,10 @@
-import { CircleAlert } from 'lucide-react';
+import { CircleAlert, FastForward, Rewind } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { videoSourceUrl } from '../../shared/api/mudio';
 import type { VideoEntry } from '../../shared/contract/mudio-contract';
 import { cn } from '../../shared/lib/cn';
 import { describeError, log } from '../../shared/lib/logger';
+import { BrandMark } from '../../shared/ui/brand-mark';
 import { Spinner } from '../../shared/ui/feedback';
 import { useSetting } from '../setting/setting-context';
 import { useMessage } from '../setting/use-message';
@@ -12,10 +13,10 @@ import { PlayerTopBar } from './player-top-bar';
 import { useAutoHideControls } from './use-auto-hide-controls';
 import { useDelayedFlag } from './use-delayed-flag';
 import { usePlaybackProgress } from './use-playback-progress';
+import { PRESS_HOLD_RATE, useVideoPressGesture } from './use-video-press-gesture';
 
 const SEEK_STEP_SEC = 5;
 const VOLUME_STEP = 0.1;
-const PLAYBACK_RATES = [0.5, 0.75, 1, 1.25, 1.5, 2];
 // Short stalls resolve on their own; only show the spinner when waiting is noticeable.
 const BUFFERING_INDICATOR_DELAY_MS = 400;
 // Kept across videos (the player remounts per video) for the lifetime of the window.
@@ -29,12 +30,14 @@ interface VideoPlayerProps {
   video: VideoEntry;
   onPrevious?: () => void;
   onNext?: () => void;
+  /** Native `loop`: the video restarts at its end and `onEnded` never fires. */
+  loop: boolean;
   onEnded: () => void;
   layoutClassName?: string;
 }
 
 /** Must be keyed by video id: each mount plays exactly one video. */
-export function VideoPlayer({ video, onPrevious, onNext, onEnded, layoutClassName }: VideoPlayerProps) {
+export function VideoPlayer({ video, onPrevious, onNext, loop, onEnded, layoutClassName }: VideoPlayerProps) {
   const { setting } = useSetting();
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -51,19 +54,35 @@ export function VideoPlayer({ video, onPrevious, onNext, onEnded, layoutClassNam
   const [isBuffering, setIsBuffering] = useState(true);
   const isBufferingIndicatorShown = useDelayedFlag(isBuffering && !hasPlaybackError, BUFFERING_INDICATOR_DELAY_MS);
   const message = useMessage().player;
-  const { areControlsVisible, revealControls } = useAutoHideControls(state.isPlaying);
+  const { areControlsVisible, revealControls, trackPointer, concealControls } = useAutoHideControls(state.isPlaying, videoRef);
   usePlaybackProgress(videoRef, video, setting.resumePlayback);
 
   const updateState = (patch: Partial<PlaybackState>) => setState(current => ({ ...current, ...patch }));
+  const togglePlay = () => {
+    const element = videoRef.current!;
+    if (element.paused) element.play().catch(error => log('warn', 'Player', `Play rejected: ${describeError(error)}`));
+    else element.pause();
+  };
+  const { pressHold, pressHandlers } = useVideoPressGesture(videoRef, {
+    onTap: togglePlay,
+    onSkipForward: () => {
+      commands.seekTo(videoRef.current!.currentTime + SEEK_STEP_SEC);
+      revealControls();
+    },
+  });
+  // Hand tremor during a hold is a stream of tiny moves; without this the controls would flicker over the video.
+  const isChromeShown = areControlsVisible && !pressHold;
 
   useEffect(() => {
     const element = videoRef.current!;
     element.volume = state.volume;
-    element.muted = state.isMuted;
-    element.playbackRate = state.playbackRate;
+    // Rewinding is a stream of seeks, which would only produce audio chirps.
+    element.muted = state.isMuted || pressHold === 'rewind';
+    // The hold is transient: the chosen rate in state is untouched and returns on release.
+    element.playbackRate = pressHold === 'fast-forward' ? PRESS_HOLD_RATE : state.playbackRate;
     sessionAudio.volume = state.volume;
     sessionAudio.isMuted = state.isMuted;
-  }, [state.volume, state.isMuted, state.playbackRate]);
+  }, [state.volume, state.isMuted, state.playbackRate, pressHold]);
 
   useEffect(() => {
     const syncFullscreen = () => updateState({ isFullscreen: document.fullscreenElement === containerRef.current });
@@ -72,11 +91,7 @@ export function VideoPlayer({ video, onPrevious, onNext, onEnded, layoutClassNam
   }, []);
 
   const commands: PlayerCommands = {
-    togglePlay: () => {
-      const element = videoRef.current!;
-      if (element.paused) element.play().catch(error => log('warn', 'Player', `Play rejected: ${describeError(error)}`));
-      else element.pause();
-    },
+    togglePlay,
     seekTo: timeSec => {
       const element = videoRef.current!;
       element.currentTime = clamp(timeSec, 0, element.duration || 0);
@@ -84,10 +99,7 @@ export function VideoPlayer({ video, onPrevious, onNext, onEnded, layoutClassNam
     },
     setVolume: volume => updateState({ volume: clamp(volume, 0, 1), isMuted: volume === 0 }),
     toggleMute: () => setState(current => ({ ...current, isMuted: !current.isMuted })),
-    cyclePlaybackRate: () => setState(current => ({
-      ...current,
-      playbackRate: PLAYBACK_RATES[(PLAYBACK_RATES.indexOf(current.playbackRate) + 1) % PLAYBACK_RATES.length],
-    })),
+    setPlaybackRate: playbackRate => updateState({ playbackRate }),
     toggleFullscreen: () => {
       if (document.fullscreenElement) void document.exitFullscreen();
       else void containerRef.current!.requestFullscreen();
@@ -105,7 +117,6 @@ export function VideoPlayer({ video, onPrevious, onNext, onEnded, layoutClassNam
         ' ': commands.togglePlay,
         k: commands.togglePlay,
         ArrowLeft: () => commands.seekTo(element.currentTime - SEEK_STEP_SEC),
-        ArrowRight: () => commands.seekTo(element.currentTime + SEEK_STEP_SEC),
         ArrowUp: () => commands.setVolume(state.volume + VOLUME_STEP),
         ArrowDown: () => commands.setVolume(state.volume - VOLUME_STEP),
         f: commands.toggleFullscreen,
@@ -124,20 +135,23 @@ export function VideoPlayer({ video, onPrevious, onNext, onEnded, layoutClassNam
   return (
     <div
       ref={containerRef}
-      onMouseMove={revealControls}
+      onMouseMove={trackPointer}
+      onPointerEnter={trackPointer}
+      onPointerLeave={concealControls}
       className={cn(
         // The caller sizes the stage; object-contain letterboxes any aspect ratio inside it.
-        'relative overflow-hidden bg-black',
+        'relative overflow-hidden bg-canvas',
         layoutClassName,
-        !areControlsVisible && 'cursor-none',
+        !isChromeShown && 'cursor-none',
       )}
     >
       <video
         ref={videoRef}
         src={videoSourceUrl(video.id)}
         autoPlay
+        loop={loop}
         className="size-full object-contain"
-        onClick={commands.togglePlay}
+        {...pressHandlers}
         onDoubleClick={commands.toggleFullscreen}
         onPlay={() => updateState({ isPlaying: true })}
         onPause={() => updateState({ isPlaying: false })}
@@ -165,8 +179,21 @@ export function VideoPlayer({ video, onPrevious, onNext, onEnded, layoutClassNam
           <p className="text-meta text-white/55">{message.playbackErrorHint}</p>
         </div>
       )}
-      <PlayerTopBar video={video} isVisible={areControlsVisible} />
-      <PlayerControls state={state} commands={commands} isVisible={areControlsVisible} />
+      {pressHold && (
+        <div role="status" className="pointer-events-none absolute left-1/2 top-20 flex -translate-x-1/2 animate-pop-in items-center gap-1.5 rounded-full bg-black/60 px-3 py-1.5 text-control font-medium tabular-nums text-white shadow-overlay ring-1 ring-white/10 backdrop-blur-xl">
+          {pressHold === 'rewind' ? <Rewind aria-hidden className="size-4 fill-current" /> : <FastForward aria-hidden className="size-4 fill-current" />}
+          {PRESS_HOLD_RATE}x
+        </div>
+      )}
+      <PlayerTopBar video={video} isVisible={isChromeShown} />
+      <PlayerControls state={state} commands={commands} isVisible={isChromeShown} />
+      {/* Paused-only mark, after the controls so it paints above their scrim. Pinned above the progress line's end; it only fades, never shifts. */}
+      <BrandMark
+        layoutClassName={cn(
+          'pointer-events-none absolute bottom-20 right-10 h-15 text-white drop-shadow-[0_1px_8px_rgb(0_0_0/0.45)] transition-opacity duration-(--duration-long)',
+          state.isPlaying ? 'opacity-0' : 'opacity-100',
+        )}
+      />
     </div>
   );
 }

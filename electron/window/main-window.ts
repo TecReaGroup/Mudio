@@ -8,11 +8,11 @@ const WINDOW_SIZE = { width: 1280, height: 800, minWidth: 900, minHeight: 560 };
 // Must match the h-13 title bars (browse-shell.tsx sidebar, back-title-bar.tsx).
 const TITLE_BAR_HEIGHT = 56;
 // Must match --canvas in src/styles.css so the window never flashes a different color.
-const WINDOW_BACKGROUND = '#faf9f7';
+const WINDOW_BACKGROUND = '#e5e4e0';
 // Transparent so the caption buttons sit on whatever surface is beneath them.
 const CAPTION_OVERLAY_COLOR = '#00000000';
 // Must contrast with --canvas of the matching scheme in src/styles.css.
-const CAPTION_SYMBOL_COLOR: Record<ColorScheme, string> = { light: '#3f3f46', dark: '#e7e5e4' };
+const CAPTION_SYMBOL_COLOR: Record<ColorScheme, string> = { light: '#1d1d1d', dark: '#fffdf9' };
 
 // After bundling this module lives in dist-electron/main.js, next to preload.cjs.
 const BUNDLE_DIRECTORY = dirname(fileURLToPath(import.meta.url));

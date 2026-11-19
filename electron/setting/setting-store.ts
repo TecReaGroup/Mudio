@@ -1,6 +1,6 @@
 import { join } from 'node:path';
 import { app, ipcMain } from 'electron';
-import { IPC_CHANNEL, LANGUAGES, type AppSetting, type Language } from '../../src/shared/contract/mudio-contract';
+import { IPC_CHANNEL, LANGUAGES, PLAYBACK_ORDERS, type AppSetting, type Language, type PlaybackOrder } from '../../src/shared/contract/mudio-contract';
 import { log } from '../log/logger';
 import { JsonFile } from '../shared/json-file';
 
@@ -9,7 +9,7 @@ const SETTING_FILE_NAME = 'setting.json';
 function defaultSetting(): AppSetting {
   return {
     language: app.getLocale().startsWith('zh') ? 'zh-CN' : 'en',
-    autoplayNext: true,
+    playbackOrder: 'sequential',
     resumePlayback: true,
   };
 }
@@ -19,14 +19,14 @@ function parseSetting(value: unknown): AppSetting {
   if (
     !candidate
     || !LANGUAGES.includes(candidate.language as Language)
-    || typeof candidate.autoplayNext !== 'boolean'
+    || !PLAYBACK_ORDERS.includes(candidate.playbackOrder as PlaybackOrder)
     || typeof candidate.resumePlayback !== 'boolean'
   ) {
     throw new TypeError('Invalid setting');
   }
   return {
     language: candidate.language as Language,
-    autoplayNext: candidate.autoplayNext,
+    playbackOrder: candidate.playbackOrder as PlaybackOrder,
     resumePlayback: candidate.resumePlayback,
   };
 }
@@ -47,7 +47,7 @@ export class SettingStore {
 
   async save(setting: AppSetting): Promise<void> {
     this.setting = setting;
-    log('info', 'Setting', `Saved language=${setting.language} autoplayNext=${setting.autoplayNext} resumePlayback=${setting.resumePlayback}`);
+    log('info', 'Setting', `Saved language=${setting.language} playbackOrder=${setting.playbackOrder} resumePlayback=${setting.resumePlayback}`);
     await this.document.write(setting);
   }
 }

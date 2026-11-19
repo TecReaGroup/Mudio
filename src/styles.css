@@ -10,7 +10,8 @@
   --text-*: initial;
 
   --color-black: #000000;
-  --color-white: #ffffff;
+  /* Warm white instead of stark #fff: media overlays and the player must never read blue-white. */
+  --color-white: #fffdf9;
 
   --radius-control-sm: 6px;
   --radius-control: 8px;
@@ -87,25 +88,26 @@
 :root {
   color-scheme: light;
   /* NOTE: --canvas must match WINDOW_BACKGROUND in electron/window/main-window.ts. */
-  --canvas: #faf9f7;
-  --surface: #ffffff;
-  --sunken: #efede9;
-  --hover: rgb(28 25 23 / 0.06);
-  --line: #e7e5e4;
-  --line-strong: #d6d3d1;
-  --foreground: #1c1917;
-  --secondary: #63605c;
-  --subtle: #a6a09b;
-  --inverse: #1c1917;
-  --on-inverse: #fafaf9;
-  --accent: #4a73d2;
-  --accent-soft: #e9eefb;
+  --canvas: #e5e4e0;
+  --surface: #f1f0ec;
+  --sunken: #dad9d4;
+  --hover: rgb(29 29 29 / 0.06);
+  --line: rgb(111 111 111 / 0.2);
+  --line-strong: #bfbebe;
+  --foreground: #1d1d1d;
+  --secondary: #5e5d5a;
+  --subtle: #8c8b87;
+  --inverse: #1d1d1d;
+  --on-inverse: #e5e4e0;
+  /* Interactive emphasis stays in ink: the pink/yellow/blue luminous hues are reserved for artwork. */
+  --accent: #1d1d1d;
+  --accent-soft: rgb(29 29 29 / 0.08);
   --success: #15803d;
-  --success-soft: #dcfce7;
-  --danger: #dc2626;
-  --danger-soft: #fee2e2;
-  --on-danger: #ffffff;
-  --scrollbar-thumb: rgb(0 0 0 / 0.22);
+  --success-soft: rgb(21 128 61 / 0.12);
+  --danger: #c62828;
+  --danger-soft: rgb(198 40 40 / 0.1);
+  --on-danger: #fffdf9;
+  --scrollbar-thumb: rgb(29 29 29 / 0.22);
 
   --shadow-rest-value: 0 1px 2px rgb(0 0 0 / 0.05);
   --shadow-raised-value: 0 6px 16px -4px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.06);
@@ -132,25 +134,27 @@
  */
 .scheme-dark {
   color-scheme: dark;
-  --canvas: #1e2022;
+  --canvas: #101010;
+  /* Chrome (title bar, playlist) sits one step above the video stage. */
   --surface: #1e2022;
   --sunken: #2a2d30;
-  --hover: rgb(255 255 255 / 0.06);
-  --line: #2e3135;
-  --line-strong: #42464b;
-  --foreground: #f2f3f5;
-  --secondary: #a3a7ad;
-  --subtle: #6f747b;
-  --inverse: #f2f3f5;
-  --on-inverse: #1e2022;
-  --accent: #7f9ef0;
-  --accent-soft: rgb(127 158 240 / 0.16);
+  --hover: rgb(255 253 249 / 0.07);
+  --line: rgb(255 253 249 / 0.2);
+  /* Slate is a hairline only, never a fill. */
+  --line-strong: rgb(111 135 156 / 0.6);
+  --foreground: #fffdf9;
+  --secondary: rgb(255 253 249 / 0.64);
+  --subtle: rgb(255 253 249 / 0.4);
+  --inverse: #fffdf9;
+  --on-inverse: #101010;
+  --accent: #fffdf9;
+  --accent-soft: rgb(255 253 249 / 0.12);
   --success: #4ade80;
   --success-soft: rgb(74 222 128 / 0.14);
   --danger: #f87171;
   --danger-soft: rgb(248 113 113 / 0.14);
-  --on-danger: #ffffff;
-  --scrollbar-thumb: rgb(255 255 255 / 0.2);
+  --on-danger: #101010;
+  --scrollbar-thumb: rgb(255 253 249 / 0.2);
 
   --shadow-rest-value: 0 1px 2px rgb(0 0 0 / 0.4);
   --shadow-raised-value: 0 6px 16px -4px rgb(0 0 0 / 0.5), 0 2px 4px -2px rgb(0 0 0 / 0.4);
@@ -233,7 +237,7 @@ h3 {
 
 @layer components {
   .range-slider {
-    --track-height: 4px;
+    --track-height: 3px;
     --thumb-size: 12px;
     appearance: none;
     height: 16px;
@@ -241,8 +245,9 @@ h3 {
     cursor: pointer;
   }
 
-  .range-slider:hover {
-    --track-height: 6px;
+  .range-slider:hover,
+  .range-slider:focus-visible {
+    --track-height: 5px;
   }
 
   .range-slider::-webkit-slider-runnable-track {
@@ -251,9 +256,9 @@ h3 {
     background: linear-gradient(
       to right,
       currentColor var(--slider-fill),
-      color-mix(in srgb, currentColor 25%, transparent) var(--slider-fill)
+      color-mix(in srgb, currentColor 28%, transparent) var(--slider-fill)
     );
-    transition: height var(--duration-short) var(--ease-standard);
+    transition: height var(--duration-medium) var(--ease-standard);
   }
 
   .range-slider::-webkit-slider-thumb {
@@ -264,12 +269,15 @@ h3 {
     border-radius: 9999px;
     background: currentColor;
     box-shadow: 0 1px 3px rgb(0 0 0 / 0.35);
-    transform: scale(0.85);
+    /* Hidden at rest so the track reads as one clean line; it grows in on interaction. */
+    transform: scale(0);
     transition: transform var(--duration-medium) var(--ease-standard);
   }
 
-  .range-slider:hover::-webkit-slider-thumb {
-    transform: scale(1.1);
+  .range-slider:hover::-webkit-slider-thumb,
+  .range-slider:focus-visible::-webkit-slider-thumb,
+  .range-slider:active::-webkit-slider-thumb {
+    transform: scale(1);
   }
 
   .range-slider:focus-visible {
