@@ -1,9 +1,7 @@
-import { Play } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Playlist, VideoEntry } from '../../shared/contract/mudio-contract';
 import { moveItem } from '../../shared/lib/order';
 import { BackButton } from '../../shared/ui/back-button';
-import { Button } from '../../shared/ui/button';
 import { EmptyState } from '../../shared/ui/feedback';
 import { PageHeader } from '../../shared/ui/page-header';
 import { SortableScope } from '../../shared/ui/sortable';
@@ -43,12 +41,6 @@ export function PlaylistDetailView({ playlist, onBack, onPlayPlaylist }: Playlis
         title={playlist.title}
         description={libraryMessage.videoCount(playlistVideos.length)}
         leading={<BackButton label={message.common.back} onBack={onBack} />}
-        actions={playlistVideos.length > 0 && (
-          <Button tone="primary" onClick={() => playFrom(playlistVideos[0].id)}>
-            <Play className="fill-current" />
-            {libraryMessage.playAll}
-          </Button>
-        )}
       />
       {playlistVideos.length === 0 ? (
         <div className="flex-1">

@@ -49,25 +49,17 @@ describe('playlists', () => {
     expect(cardTitles()).toEqual([THIRD.title, FIRST.title]);
   });
 
-  it('plays the whole playlist from its first video', async () => {
-    const { fake, user } = await openRoadTrip();
-
-    await user.click(screen.getByRole('button', { name: 'Play All' }));
-
-    expect(fake.api.player.open).toHaveBeenCalledWith({
-      videoId: THIRD.id,
-      playlistIds: [THIRD.id, FIRST.id],
-      playlistTitle: 'Road Trip',
-      playlistId: ROAD_TRIP.id,
-    });
-  });
-
   it('plays the playlist from the clicked video', async () => {
     const { fake, user } = await openRoadTrip();
 
     await user.click(screen.getByRole('button', { name: FIRST.title }));
 
-    expect(fake.api.player.open).toHaveBeenCalledWith(expect.objectContaining({ videoId: FIRST.id, playlistId: ROAD_TRIP.id }));
+    expect(fake.api.player.open).toHaveBeenCalledWith({
+      videoId: FIRST.id,
+      playlistIds: [THIRD.id, FIRST.id],
+      playlistTitle: 'Road Trip',
+      playlistId: ROAD_TRIP.id,
+    });
   });
 
   it('plays the playlist as it is now after a library push reordered it', async () => {
@@ -75,7 +67,7 @@ describe('playlists', () => {
     const reordered = buildPlaylist(ROAD_TRIP.id, ROAD_TRIP.title, [FIRST.id, THIRD.id]);
 
     act(() => fake.pushLibrary({ ...SNAPSHOT, playlists: [reordered] }));
-    await user.click(screen.getByRole('button', { name: 'Play All' }));
+    await user.click(screen.getByRole('button', { name: FIRST.title }));
 
     expect(fake.api.player.open).toHaveBeenCalledWith(expect.objectContaining({ videoId: FIRST.id, playlistIds: [FIRST.id, THIRD.id] }));
   });
