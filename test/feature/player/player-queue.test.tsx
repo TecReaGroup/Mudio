@@ -1,4 +1,4 @@
-import { act, screen, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import type { PlaybackRequest } from '../../../src/shared/contract/mudio-contract';
 import { installFakeMudio } from '../../support/fake-mudio';
@@ -33,7 +33,7 @@ describe('player queue', () => {
     expect(within(playlistPanel).getByRole('heading', { name: 'Recent' })).toBeDefined();
     expect(within(playlistPanel).getByText('2 / 3')).toBeDefined();
     expect(currentRowText(playlistPanel)).toContain(SECOND.title);
-    expect(document.title).toBe(SECOND.title);
+    await waitFor(() => expect(document.title).toBe(SECOND.title));
   });
 
   it('switches video from the queue and from Previous / Next', async () => {
