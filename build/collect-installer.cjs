@@ -1,4 +1,4 @@
-// electron-builder hook: copies only the installers from temp/package into release/,
+// electron-builder hook: copies only the installers (and the Windows portable .exe) from temp/package into release/,
 // leaving unpacked apps, blockmaps and builder logs behind as intermediates.
 const fs = require('node:fs');
 const path = require('node:path');

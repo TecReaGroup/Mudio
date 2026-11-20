@@ -1,3 +1,5 @@
+// NOTE: Must stay the first import: the logger resolves userData when its module loads.
+import './portable/portable-data-path';
 import { app, BrowserWindow } from 'electron';
 import { IPC_CHANNEL } from '../src/shared/contract/mudio-contract';
 import { registerDefaultPlayerIpc } from './launch/default-player';
