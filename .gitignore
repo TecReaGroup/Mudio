@@ -39,8 +39,7 @@ Desktop.ini
 temp/*
 !temp/.gitkeep
 
-# Electron build output
-dist-electron/
+# Installers collected by build/collect-installer.cjs
 release/
 
 /log/*

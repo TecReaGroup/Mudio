@@ -28,6 +28,9 @@ function startApp(): void {
   const showLibrary = () => {
     if (!mainWindow) return showMainWindow();
     if (mainWindow.isMinimized()) mainWindow.restore();
+    // NOTE: show(), not just focus(): on a cold start from a file the player opens before the main window's
+    // ready-to-show, which then never shows it, and focus() is a no-op on a hidden window.
+    mainWindow.show();
     mainWindow.focus();
   };
 

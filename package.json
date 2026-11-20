@@ -4,7 +4,7 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "main": "dist-electron/main.js",
+  "main": "dist/electron/main.js",
   "scripts": {
     "dev": "vite",
     "backend": "node backend/server.mjs",
@@ -47,13 +47,14 @@
     "appId": "com.mudio.app",
     "productName": "Mudio",
     "icon": "public/icon.png",
-    "directories": { "output": "release" },
-    "files": ["dist/**", "dist-electron/**"],
+    "directories": { "output": "temp/package" },
+    "files": ["dist/**"],
+    "afterAllArtifactBuild": "build/collect-installer.cjs",
     "fileAssociations": [
       { "ext": ["mp4", "m4v", "webm", "mkv", "mov", "ogv"], "name": "Mudio.Video", "description": "Video", "role": "Viewer" }
     ],
     "win": { "target": "nsis" },
-    "nsis": { "include": "build/installer.nsh" },
+    "nsis": { "include": "build/installer.nsh", "oneClick": false, "allowToChangeInstallationDirectory": true, "differentialPackage": false },
     "mac": { "target": "dmg" },
     "linux": { "target": "AppImage" }
   }

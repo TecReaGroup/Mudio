@@ -7,13 +7,14 @@ const CAPTION_OVERLAY_COLOR = '#00000000';
 const TRAFFIC_LIGHT_HEIGHT = 18;
 const TRAFFIC_LIGHT_X = 18;
 
-// After bundling this module lives in dist-electron/main.js, next to preload.cjs.
+// After bundling this module lives in dist/electron/main.js, next to preload.cjs.
 const BUNDLE_DIRECTORY = dirname(fileURLToPath(import.meta.url));
 const IS_MAC = process.platform === 'darwin';
-// Vite serves public/ in dev and copies it into dist/ for production builds.
+const RENDERER_DIRECTORY = join(BUNDLE_DIRECTORY, '../renderer');
+// Vite serves public/ in dev and copies it into dist/renderer/ for production builds.
 const WINDOW_ICON_PATH = process.env.VITE_DEV_SERVER_URL
-  ? join(BUNDLE_DIRECTORY, '../public/icon.png')
-  : join(BUNDLE_DIRECTORY, '../dist/icon.png');
+  ? join(BUNDLE_DIRECTORY, '../../public/icon.png')
+  : join(RENDERER_DIRECTORY, 'icon.png');
 
 export interface AppWindowChrome {
   size: { width: number; height: number; minWidth: number; minHeight: number };
@@ -62,7 +63,7 @@ export function createAppWindow(chrome: AppWindowChrome): BrowserWindow {
     viewUrl.hash = chrome.viewHash;
     void window.loadURL(viewUrl.toString());
   } else {
-    void window.loadFile(join(BUNDLE_DIRECTORY, '../dist/index.html'), { hash: chrome.viewHash });
+    void window.loadFile(join(RENDERER_DIRECTORY, 'index.html'), { hash: chrome.viewHash });
   }
   return window;
 }
