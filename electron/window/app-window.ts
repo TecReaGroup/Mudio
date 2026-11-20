@@ -1,6 +1,6 @@
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { BrowserWindow } from 'electron';
+import { BrowserWindow, type BrowserWindowConstructorOptions } from 'electron';
 
 // Transparent so the caption buttons sit on whatever surface is beneath them.
 const CAPTION_OVERLAY_COLOR = '#00000000';
@@ -28,17 +28,9 @@ export interface AppWindowChrome {
   viewHash: string;
 }
 
-export const APP_WEB_PREFERENCES: Electron.WebPreferences = {
-  preload: join(BUNDLE_DIRECTORY, 'preload.cjs'),
-  contextIsolation: true,
-  sandbox: true,
-  nodeIntegration: false,
-  autoplayPolicy: 'no-user-gesture-required',
-};
-
-/** Frameless, initially hidden app window with the shared security, navigation and loading setup; the owner decides when it appears. */
+/** Frameless, initially hidden app window with a title bar; the owner decides when it appears. */
 export function createAppWindow(chrome: AppWindowChrome): BrowserWindow {
-  const window = new BrowserWindow({
+  return createRendererWindow({
     ...chrome.size,
     title: 'Mudio',
     icon: APP_ICON_PATH,
@@ -48,14 +40,21 @@ export function createAppWindow(chrome: AppWindowChrome): BrowserWindow {
     ...(IS_MAC
       ? { trafficLightPosition: { x: TRAFFIC_LIGHT_X, y: Math.round((chrome.titleBarHeight - TRAFFIC_LIGHT_HEIGHT) / 2) } }
       : { titleBarOverlay: { color: CAPTION_OVERLAY_COLOR, symbolColor: chrome.captionSymbolColor, height: chrome.titleBarHeight } }),
-    webPreferences: APP_WEB_PREFERENCES,
-  });
-  loadAppView(window, chrome.viewHash);
-  return window;
+  }, chrome.viewHash);
 }
 
-/** Locks navigation down and loads the renderer entry selected by viewHash; every window built on APP_WEB_PREFERENCES needs both. */
-export function loadAppView(window: BrowserWindow, viewHash: string): void {
+/** Any window running the renderer: sandboxed with the preload API, navigation locked, the entry chosen by viewHash. */
+export function createRendererWindow(options: Omit<BrowserWindowConstructorOptions, 'webPreferences'>, viewHash: string): BrowserWindow {
+  const window = new BrowserWindow({
+    ...options,
+    webPreferences: {
+      preload: join(BUNDLE_DIRECTORY, 'preload.cjs'),
+      contextIsolation: true,
+      sandbox: true,
+      nodeIntegration: false,
+      autoplayPolicy: 'no-user-gesture-required',
+    },
+  });
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   // Dropping a file outside the drop zone would otherwise navigate away from the app.
   window.webContents.on('will-navigate', (event, url) => {
@@ -70,4 +69,5 @@ export function loadAppView(window: BrowserWindow, viewHash: string): void {
   } else {
     void window.loadFile(join(RENDERER_DIRECTORY, 'index.html'), { hash: viewHash });
   }
+  return window;
 }

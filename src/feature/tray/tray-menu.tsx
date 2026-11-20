@@ -12,7 +12,7 @@ export function TrayMenu() {
   const message = useMessage().tray;
   return (
     <div className="h-full p-3">
-      <menu className="m-0 flex h-full list-none flex-col rounded-card border border-line bg-surface p-1 shadow-raised">
+      <menu className="flex h-full flex-col rounded-card border border-line bg-surface p-1 shadow-raised">
         <li>
           <Button tone="ghost" size="md" layoutClassName="w-full justify-start" onClick={() => mudio.trayMenu.openLibrary()}>
             <BrandMark />

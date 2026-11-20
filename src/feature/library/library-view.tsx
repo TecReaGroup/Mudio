@@ -63,7 +63,7 @@ export function LibraryView({ collection, searchQuery, onClearSearch, onOpenFold
         action={(
           <Button onClick={onOpenFolderSetting}>
             <FolderPlus aria-hidden />
-            {libraryMessage.addFolder}
+            {message.setting.libraryFolder.add}
           </Button>
         )}
       />

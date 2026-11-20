@@ -8,7 +8,7 @@ const ZH_CN = {
     close: '关闭',
   },
   library: {
-    navTitle: '媒体库',
+    navTitle: '视频库',
     searchPlaceholder: '搜索视频',
     sectionTitle: { all: '视频库', playlist: '播放列表', recent: '最近播放' },
     emptyTitle: { all: '视频库是空的', recent: '还没有播放记录', playlist: '还没有播放列表', playlistVideo: '这个播放列表是空的' },
@@ -22,7 +22,6 @@ const ZH_CN = {
     videoCount: (count: number) => `${count} 个视频`,
     playlistCount: (count: number) => `${count} 个播放列表`,
     playAll: '全部播放',
-    addFolder: '添加文件夹',
     removeVideo: '从视频库移除',
     removeConfirmTitle: '从视频库移除？',
     removeConfirmDescription: (title: string) => `“${title}”的播放进度和缩略图将被清除，原文件不会被删除。`,
@@ -66,7 +65,7 @@ const ZH_CN = {
   setting: {
     category: { general: '通用', language: '语言', libraryFolder: '文件夹' },
     libraryFolder: {
-      title: '媒体库文件夹',
+      title: '视频库文件夹',
       description: (depth: number) => `启动时自动扫描，包括最多 ${depth} 层子文件夹`,
       add: '添加文件夹',
       rescan: '重新扫描',
@@ -76,7 +75,7 @@ const ZH_CN = {
       editPlaylistHint: '文件夹中的所有视频（包括之后扫描到的）都会加入这些播放列表',
       remove: '移除文件夹',
       removeConfirmTitle: '移除这个文件夹？',
-      removeConfirmDescription: (folderPath: string) => `“${folderPath}”中的视频会从媒体库移除，播放进度和缩略图将被清除，原文件不会被删除。`,
+      removeConfirmDescription: (folderPath: string) => `“${folderPath}”中的视频会从视频库移除，播放进度和缩略图将被清除，原文件不会被删除。`,
       removeConfirm: '移除',
     },
     resumePlayback: '记住播放进度',
@@ -88,7 +87,7 @@ const ZH_CN = {
     languageDescription: '选择界面显示的语言',
   },
   dialog: {
-    addLibraryFolder: '添加媒体库文件夹',
+    addLibraryFolder: '添加视频库文件夹',
   },
   tray: {
     showLibrary: '打开 Mudio',
@@ -120,7 +119,6 @@ const EN: Messages = {
     videoCount: count => `${count} ${count === 1 ? 'video' : 'videos'}`,
     playlistCount: count => `${count} ${count === 1 ? 'playlist' : 'playlists'}`,
     playAll: 'Play All',
-    addFolder: 'Add Folder',
     removeVideo: 'Remove from library',
     removeConfirmTitle: 'Remove from library?',
     removeConfirmDescription: title => `Progress and thumbnail for "${title}" will be cleared. The file itself is not deleted.`,

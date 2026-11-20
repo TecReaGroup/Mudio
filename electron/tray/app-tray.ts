@@ -33,7 +33,6 @@ export function createAppTray(libraryWindow: LibraryWindow): Tray {
   });
   ipcMain.on(IPC_CHANNEL.trayMenuQuit, () => {
     log('info', 'Tray', 'Quit from tray menu');
-    menu.close();
     app.quit();
   });
   return tray;

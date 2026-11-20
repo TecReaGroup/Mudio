@@ -84,6 +84,7 @@ describe('library browsing', () => {
     await user.click(screen.getByRole('button', { name: 'Add Folder' }));
 
     expect(await screen.findByText('Library folders')).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Folders' }).getAttribute('aria-current')).toBe('page');
   });
 
   it('keeps the library usable and explains why when the initial load fails', async () => {

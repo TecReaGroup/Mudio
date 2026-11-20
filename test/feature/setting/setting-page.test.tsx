@@ -21,6 +21,20 @@ async function openSetting(category?: 'Language' | 'Folders') {
   return user;
 }
 
+describe('setting navigation', () => {
+  it('opens on General and goes back to the section it was opened from', async () => {
+    installFakeMudio();
+    const user = await renderLibraryWindow();
+    await user.click(screen.getByRole('button', { name: 'Recent' }));
+
+    await user.click(screen.getByRole('button', { name: 'Settings' }));
+    expect(screen.getByRole('button', { name: 'General' }).getAttribute('aria-current')).toBe('page');
+    await user.click(screen.getByRole('button', { name: 'Back' }));
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Recent' })).toBeDefined();
+  });
+});
+
 describe('general settings', () => {
   it('saves "Remember progress" as soon as it is toggled', async () => {
     const fake = installFakeMudio();
