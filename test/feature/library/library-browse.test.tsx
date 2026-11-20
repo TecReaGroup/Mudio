@@ -76,14 +76,14 @@ describe('library browsing', () => {
     await waitFor(() => expect(cardTitles()).toEqual(['Beach Sunset']));
   });
 
-  it('shows the import action when the library is empty', async () => {
-    const fake = installFakeMudio();
+  it('sends the empty library to the folder setting', async () => {
+    installFakeMudio();
     const user = await renderLibraryWindow();
 
     expect(screen.getByText('Your library is empty')).toBeDefined();
-    await user.click(screen.getByRole('button', { name: 'Import Folder' }));
+    await user.click(screen.getByRole('button', { name: 'Add Folder' }));
 
-    expect(fake.api.library.pickAndImportFolder).toHaveBeenCalledOnce();
+    expect(await screen.findByText('Library folders')).toBeDefined();
   });
 
   it('keeps the library usable and explains why when the initial load fails', async () => {

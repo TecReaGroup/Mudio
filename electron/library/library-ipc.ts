@@ -1,5 +1,5 @@
 import { BrowserWindow, dialog, ipcMain, type IpcMainInvokeEvent, type OpenDialogOptions } from 'electron';
-import { IPC_CHANNEL, SUPPORTED_VIDEO_EXTENSIONS, type VideoEdit } from '../../src/shared/contract/mudio-contract';
+import { IPC_CHANNEL, type VideoEdit } from '../../src/shared/contract/mudio-contract';
 import { MESSAGES } from '../../src/shared/i18n/message';
 import { expectBytes, expectNonNegativeNumber, expectString, expectStringArray, expectText } from '../shared/ipc-payload';
 import type { SettingStore } from '../setting/setting-store';
@@ -30,21 +30,6 @@ export function registerLibraryIpc(library: VideoLibrary, settingStore: SettingS
   const dialogMessage = () => MESSAGES[settingStore.current().language].dialog;
 
   ipcMain.handle(IPC_CHANNEL.libraryList, () => library.snapshot());
-
-  ipcMain.handle(IPC_CHANNEL.libraryPickFiles, async event => {
-    const message = dialogMessage();
-    const selection = await showOpenDialogFor(event, {
-      title: message.openVideo,
-      properties: ['openFile', 'multiSelections'],
-      filters: [{ name: message.videoFilter, extensions: [...SUPPORTED_VIDEO_EXTENSIONS] }],
-    });
-    return selection.canceled ? [] : library.importPaths(selection.filePaths);
-  });
-
-  ipcMain.handle(IPC_CHANNEL.libraryPickFolder, async event => {
-    const selection = await showOpenDialogFor(event, { title: dialogMessage().importFolder, properties: ['openDirectory'] });
-    return selection.canceled ? [] : library.importPaths(selection.filePaths);
-  });
 
   ipcMain.handle(IPC_CHANNEL.libraryFolderPickAndAdd, async event => {
     const selection = await showOpenDialogFor(event, { title: dialogMessage().addLibraryFolder, properties: ['openDirectory'] });

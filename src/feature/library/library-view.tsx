@@ -1,5 +1,5 @@
+import { FolderPlus } from 'lucide-react';
 import { useDeferredValue, useMemo, useState } from 'react';
-import { SUPPORTED_VIDEO_EXTENSIONS } from '../../shared/contract/mudio-contract';
 import { moveItem } from '../../shared/lib/order';
 import { Button } from '../../shared/ui/button';
 import { EmptyState, ErrorBanner } from '../../shared/ui/feedback';
@@ -7,22 +7,21 @@ import { PageHeader } from '../../shared/ui/page-header';
 import { SortableScope } from '../../shared/ui/sortable';
 import { useMessage } from '../setting/use-message';
 import { CardGrid } from './card-grid';
-import { ImportFolderButton } from './import-folder-button';
 import type { VideoCollection } from './library-section';
 import { VideoCard } from './video-card';
 import { VideoEditDialog } from './video-edit-dialog';
 import { useVideoLibrary } from './video-library-context';
 
-const SUPPORTED_FORMAT_HINT = SUPPORTED_VIDEO_EXTENSIONS.map(extension => `.${extension}`).join('  ');
-
 interface LibraryViewProps {
   collection: VideoCollection;
   searchQuery: string;
   onClearSearch: () => void;
+  /** Library videos come only from library folders, so the empty library sends the user to manage them. */
+  onOpenFolderSetting: () => void;
   onPlay: (videoId: string) => void;
 }
 
-export function LibraryView({ collection, searchQuery, onClearSearch, onPlay }: LibraryViewProps) {
+export function LibraryView({ collection, searchQuery, onClearSearch, onOpenFolderSetting, onPlay }: LibraryViewProps) {
   const { folderVideos, recentVideos, findVideo, arrangeVideos, arrangeRecent, removeFromRecent, loadError } = useVideoLibrary();
   const [editingVideoId, setEditingVideoId] = useState<string | null>(null);
   // Looked up on every render, so the dialog closes itself if the video is removed meanwhile.
@@ -60,8 +59,13 @@ export function LibraryView({ collection, searchQuery, onClearSearch, onPlay }: 
     return (
       <EmptyState
         title={libraryMessage.emptyTitle.all}
-        hint={libraryMessage.emptyLibraryHint(SUPPORTED_FORMAT_HINT)}
-        action={<ImportFolderButton tone="secondary" size="md" />}
+        hint={libraryMessage.emptyLibraryHint}
+        action={(
+          <Button onClick={onOpenFolderSetting}>
+            <FolderPlus aria-hidden />
+            {libraryMessage.addFolder}
+          </Button>
+        )}
       />
     );
   };

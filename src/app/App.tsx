@@ -3,6 +3,7 @@ import { useExternalOpen } from '../feature/launch/use-external-open';
 import { FileDropZone } from '../feature/library/file-drop-zone';
 import { useVideoLibrary, VideoLibraryProvider } from '../feature/library/video-library-context';
 import { SettingProvider } from '../feature/setting/setting-context';
+import type { SettingCategory } from '../feature/setting/setting-panel';
 import { useMessage } from '../feature/setting/use-message';
 import { buildRecentQueue, type LibrarySection } from '../feature/library/library-section';
 import type { PlaybackRequest, Playlist } from '../shared/contract/mudio-contract';
@@ -14,7 +15,7 @@ import { describeError, log } from '../shared/lib/logger';
 
 type AppRoute =
   | { page: 'home'; section: LibrarySection }
-  | { page: 'setting'; returnSection: LibrarySection };
+  | { page: 'setting'; category: SettingCategory; returnSection: LibrarySection };
 
 function play(request: PlaybackRequest): void {
   mudio.player.open(request)
@@ -58,13 +59,13 @@ function AppShell() {
         <HomePage
           section={route.section}
           onSectionChange={section => setRoute({ page: 'home', section })}
-          onOpenSetting={() => setRoute({ page: 'setting', returnSection: route.section })}
+          onOpenSetting={category => setRoute({ page: 'setting', category, returnSection: route.section })}
           onPlay={playVideo}
           onPlayPlaylist={playPlaylist}
         />
       )}
       {route.page === 'setting' && (
-        <SettingPage onBack={() => setRoute({ page: 'home', section: route.returnSection })} />
+        <SettingPage initialCategory={route.category} onBack={() => setRoute({ page: 'home', section: route.returnSection })} />
       )}
     </FileDropZone>
   );

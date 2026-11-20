@@ -11,8 +11,6 @@ const mudioApi: MudioApi = {
   platform: process.platform,
   library: {
     list: () => ipcRenderer.invoke(IPC_CHANNEL.libraryList),
-    pickAndImportFiles: () => ipcRenderer.invoke(IPC_CHANNEL.libraryPickFiles),
-    pickAndImportFolder: () => ipcRenderer.invoke(IPC_CHANNEL.libraryPickFolder),
     importPaths: paths => ipcRenderer.invoke(IPC_CHANNEL.libraryImportPaths, paths),
     remove: videoId => ipcRenderer.invoke(IPC_CHANNEL.libraryRemove, videoId),
     arrange: videoIds => ipcRenderer.invoke(IPC_CHANNEL.libraryArrange, videoIds),

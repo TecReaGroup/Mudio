@@ -3,6 +3,7 @@ import { useRef, useState } from 'react';
 import type { LibrarySection } from '../../feature/library/library-section';
 import { LibraryView } from '../../feature/library/library-view';
 import { PlaylistIndexView } from '../../feature/library/playlist-index-view';
+import type { SettingCategory } from '../../feature/setting/setting-panel';
 import { useMessage } from '../../feature/setting/use-message';
 import type { Playlist } from '../../shared/contract/mudio-contract';
 import { BrowseShell } from '../../shared/ui/browse-shell';
@@ -20,7 +21,7 @@ const LIBRARY_NAV: readonly { section: LibrarySection; icon: LucideIcon }[] = [
 interface HomePageProps {
   section: LibrarySection;
   onSectionChange: (section: LibrarySection) => void;
-  onOpenSetting: () => void;
+  onOpenSetting: (category: SettingCategory) => void;
   onPlay: (videoId: string) => void;
   onPlayPlaylist: (playlist: Playlist, startVideoId: string) => void;
 }
@@ -72,7 +73,7 @@ export function HomePage({ section, onSectionChange, onOpenSetting, onPlay, onPl
       topBarCenter={searchBox}
       sidebar={<NavList label={message.library.navTitle} entries={navEntries} currentValue={section} onSelect={onSectionChange} />}
       sidebarFooter={(
-        <IconButton size="lg" label={message.common.setting} layoutClassName="self-start" onClick={onOpenSetting}>
+        <IconButton size="lg" label={message.common.setting} layoutClassName="self-start" onClick={() => onOpenSetting('general')}>
           <Settings strokeWidth={1.75} />
         </IconButton>
       )}
@@ -84,6 +85,7 @@ export function HomePage({ section, onSectionChange, onOpenSetting, onPlay, onPl
           collection={section}
           searchQuery={searchQuery}
           onClearSearch={clearSearch}
+          onOpenFolderSetting={() => onOpenSetting('libraryFolder')}
           onPlay={onPlay}
         />
       )}

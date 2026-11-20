@@ -94,8 +94,6 @@ export type LogLevel = (typeof LOG_LEVELS)[number];
 
 export const IPC_CHANNEL = {
   libraryList: 'library:list',
-  libraryPickFiles: 'library:pick-files',
-  libraryPickFolder: 'library:pick-folder',
   libraryImportPaths: 'library:import-paths',
   libraryRemove: 'library:remove',
   libraryArrange: 'library:arrange',
@@ -131,10 +129,6 @@ export interface MudioApi {
   platform: string;
   library: {
     list(): Promise<LibrarySnapshot>;
-    /** Shows a file picker; resolves to the picked videos (empty when cancelled). */
-    pickAndImportFiles(): Promise<VideoEntry[]>;
-    /** Shows a folder picker and imports every video found inside it. */
-    pickAndImportFolder(): Promise<VideoEntry[]>;
     /** Accepts files and folders; unsupported files are skipped. */
     importPaths(paths: string[]): Promise<VideoEntry[]>;
     remove(videoId: string): Promise<void>;

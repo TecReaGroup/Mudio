@@ -13,8 +13,13 @@ const CATEGORY_NAV: readonly { category: SettingCategory; icon: LucideIcon }[] =
   { category: 'libraryFolder', icon: FolderOpen },
 ];
 
-export function SettingPage({ onBack }: { onBack: () => void }) {
-  const [category, setCategory] = useState<SettingCategory>('general');
+interface SettingPageProps {
+  initialCategory: SettingCategory;
+  onBack: () => void;
+}
+
+export function SettingPage({ initialCategory, onBack }: SettingPageProps) {
+  const [category, setCategory] = useState(initialCategory);
   const message = useMessage();
   const navEntries = CATEGORY_NAV.map(({ category: navCategory, icon }) => ({
     value: navCategory,

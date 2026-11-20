@@ -35,8 +35,6 @@ function createFakeApi(options: FakeMudioOptions) {
     library: {
       list: vi.fn<MudioApi['library']['list']>(() =>
         options.libraryLoadError ? Promise.reject(options.libraryLoadError) : Promise.resolve(snapshot)),
-      pickAndImportFiles: vi.fn<MudioApi['library']['pickAndImportFiles']>(async () => []),
-      pickAndImportFolder: vi.fn<MudioApi['library']['pickAndImportFolder']>(async () => []),
       importPaths: vi.fn<MudioApi['library']['importPaths']>(async () => []),
       remove: vi.fn<MudioApi['library']['remove']>(async () => undefined),
       arrange: vi.fn<MudioApi['library']['arrange']>(async () => undefined),
