@@ -114,6 +114,11 @@ async function isFileGone(filePath: string): Promise<boolean> {
   }
 }
 
+async function goneVideoIds(videos: VideoEntry[]): Promise<string[]> {
+  const goneFlags = await Promise.all(videos.map(video => isFileGone(video.filePath)));
+  return videos.filter((_video, index) => goneFlags[index]).map(video => video.id);
+}
+
 /** Puts the video in exactly the titled playlists, creating missing ones and dropping any left empty. */
 function assignToPlaylists(playlists: Playlist[], videoId: string, playlistTitles: string[]): Playlist[] {
   const wantedTitles = new Set(playlistTitles);
@@ -258,8 +263,7 @@ export class VideoLibrary {
     if (this.folders.length === 0) return;
     const candidates = [...this.videos.values()]
       .filter(video => this.folders.some(folder => isInsideFolder(folder.path, video.filePath)));
-    const goneIds = (await Promise.all(candidates.map(async video => (await isFileGone(video.filePath)) ? video.id : null)))
-      .filter((videoId): videoId is string => videoId !== null);
+    const goneIds = await goneVideoIds(candidates);
     if (goneIds.length > 0) {
       await this.dropVideos(goneIds);
       await this.commit();
@@ -267,6 +271,15 @@ export class VideoLibrary {
 
     const matched = await this.importPaths(this.folders.map(folder => folder.path));
     log('info', 'Library', `Rescanned ${this.folders.length} library folders: ${matched.length} videos found, ${goneIds.length} missing removed`);
+  }
+
+  /** Recent may hold videos outside every library folder (opened directly), which the folder rescan never checks. */
+  async dropMissingRecent(): Promise<void> {
+    const goneIds = await goneVideoIds(this.recentIds.flatMap(videoId => this.videos.get(videoId) ?? []));
+    if (goneIds.length === 0) return;
+    await this.dropVideos(goneIds);
+    log('info', 'Library', `Removed ${goneIds.length} missing videos found in Recent`);
+    await this.commit();
   }
 
   thumbnailPath(videoId: string): string {

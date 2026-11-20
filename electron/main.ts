@@ -75,6 +75,8 @@ function startApp(): void {
       // In the background: new videos stream into the open window instead of delaying it.
       library.rescanFolders()
         .catch(error => log('error', 'Library', `Startup folder rescan failed: ${describeError(error)}`));
+      library.dropMissingRecent()
+        .catch(error => log('error', 'Library', `Startup Recent check failed: ${describeError(error)}`));
       app.on('activate', () => {
         if (!BrowserWindow.getAllWindows().some(window => window.isVisible())) libraryWindow.present();
       });
