@@ -76,6 +76,8 @@ export interface AppSetting {
 
 /** URL hash that boots the renderer into the player window instead of the library. */
 export const PLAYER_VIEW_HASH = 'player';
+/** URL hash that boots the renderer into the tray icon's pop-up menu. */
+export const TRAY_MENU_VIEW_HASH = 'tray-menu';
 
 export interface PlaybackRequest {
   videoId: string;
@@ -118,6 +120,8 @@ export const IPC_CHANNEL = {
   playerPlay: 'player:play',
   playerReturnToLibrary: 'player:return-to-library',
   defaultPlayerOpenSetting: 'default-player:open-setting',
+  trayMenuOpenLibrary: 'tray-menu:open-library',
+  trayMenuQuit: 'tray-menu:quit',
   log: 'log:write',
 } as const;
 
@@ -181,6 +185,11 @@ export interface MudioApi {
   /** Windows only: apps cannot claim file types themselves, so this opens Settings at Mudio's default-app page. */
   defaultPlayer: {
     openSetting(): Promise<void>;
+  };
+  /** Actions of the tray icon's pop-up menu; each one also dismisses the menu. */
+  trayMenu: {
+    openLibrary(): void;
+    quit(): void;
   };
   pathForFile(file: File): string;
   log(level: LogLevel, module: string, message: string): void;

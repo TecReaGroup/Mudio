@@ -72,6 +72,10 @@ function createFakeApi(options: FakeMudioOptions) {
     defaultPlayer: {
       openSetting: vi.fn<MudioApi['defaultPlayer']['openSetting']>(async () => undefined),
     },
+    trayMenu: {
+      openLibrary: vi.fn<MudioApi['trayMenu']['openLibrary']>(),
+      quit: vi.fn<MudioApi['trayMenu']['quit']>(),
+    },
     pathForFile: vi.fn<MudioApi['pathForFile']>(file => `D:\\Drop\\${file.name}`),
     log: vi.fn<MudioApi['log']>(),
   } satisfies MudioApi;

@@ -231,6 +231,11 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* The tray menu window is transparent around the menu card; a canvas fill would show as a grey box. */
+:root[data-view='tray-menu'] body {
+  background: transparent;
+}
+
 h1,
 h2,
 h3 {

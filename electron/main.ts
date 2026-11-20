@@ -59,7 +59,7 @@ function startApp(): void {
       ]);
       const playerWindow = new PlayerWindow(libraryWindow);
       opener = new ExternalFileOpener(library, libraryWindow, playerWindow);
-      tray = createAppTray(libraryWindow, settingStore);
+      tray = createAppTray(libraryWindow);
 
       handleMediaProtocol(library);
       registerLibraryIpc(library, settingStore);

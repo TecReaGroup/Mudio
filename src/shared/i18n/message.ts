@@ -10,7 +10,7 @@ const ZH_CN = {
   library: {
     navTitle: '媒体库',
     searchPlaceholder: '搜索视频',
-    sectionTitle: { all: '视频', playlist: '播放列表', recent: '最近播放' },
+    sectionTitle: { all: '视频库', playlist: '播放列表', recent: '最近播放' },
     emptyTitle: { all: '视频库是空的', recent: '还没有播放记录', playlist: '还没有播放列表', playlistVideo: '这个播放列表是空的' },
     emptyLibraryHint: (formats: string) => `拖拽视频文件到窗口，或导入一个文件夹。支持 ${formats}`,
     emptyRecentHint: '播放过的视频会出现在这里',
@@ -111,7 +111,7 @@ const EN: Messages = {
   library: {
     navTitle: 'Library',
     searchPlaceholder: 'Search videos',
-    sectionTitle: { all: 'Video', playlist: 'Playlist', recent: 'Recent' },
+    sectionTitle: { all: 'Library', playlist: 'Playlist', recent: 'Recent' },
     emptyTitle: { all: 'Your library is empty', recent: 'No playback history yet', playlist: 'No playlists yet', playlistVideo: 'This playlist is empty' },
     emptyLibraryHint: formats => `Drop video files onto the window, or import a folder. Supports ${formats}`,
     emptyRecentHint: 'Videos you play will show up here',

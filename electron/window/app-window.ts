@@ -28,6 +28,14 @@ export interface AppWindowChrome {
   viewHash: string;
 }
 
+export const APP_WEB_PREFERENCES: Electron.WebPreferences = {
+  preload: join(BUNDLE_DIRECTORY, 'preload.cjs'),
+  contextIsolation: true,
+  sandbox: true,
+  nodeIntegration: false,
+  autoplayPolicy: 'no-user-gesture-required',
+};
+
 /** Frameless, initially hidden app window with the shared security, navigation and loading setup; the owner decides when it appears. */
 export function createAppWindow(chrome: AppWindowChrome): BrowserWindow {
   const window = new BrowserWindow({
@@ -40,15 +48,14 @@ export function createAppWindow(chrome: AppWindowChrome): BrowserWindow {
     ...(IS_MAC
       ? { trafficLightPosition: { x: TRAFFIC_LIGHT_X, y: Math.round((chrome.titleBarHeight - TRAFFIC_LIGHT_HEIGHT) / 2) } }
       : { titleBarOverlay: { color: CAPTION_OVERLAY_COLOR, symbolColor: chrome.captionSymbolColor, height: chrome.titleBarHeight } }),
-    webPreferences: {
-      preload: join(BUNDLE_DIRECTORY, 'preload.cjs'),
-      contextIsolation: true,
-      sandbox: true,
-      nodeIntegration: false,
-      autoplayPolicy: 'no-user-gesture-required',
-    },
+    webPreferences: APP_WEB_PREFERENCES,
   });
+  loadAppView(window, chrome.viewHash);
+  return window;
+}
 
+/** Locks navigation down and loads the renderer entry selected by viewHash; every window built on APP_WEB_PREFERENCES needs both. */
+export function loadAppView(window: BrowserWindow, viewHash: string): void {
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   // Dropping a file outside the drop zone would otherwise navigate away from the app.
   window.webContents.on('will-navigate', (event, url) => {
@@ -58,10 +65,9 @@ export function createAppWindow(chrome: AppWindowChrome): BrowserWindow {
   const devServerUrl = process.env.VITE_DEV_SERVER_URL;
   if (devServerUrl) {
     const viewUrl = new URL(devServerUrl);
-    viewUrl.hash = chrome.viewHash;
+    viewUrl.hash = viewHash;
     void window.loadURL(viewUrl.toString());
   } else {
-    void window.loadFile(join(RENDERER_DIRECTORY, 'index.html'), { hash: chrome.viewHash });
+    void window.loadFile(join(RENDERER_DIRECTORY, 'index.html'), { hash: viewHash });
   }
-  return window;
 }

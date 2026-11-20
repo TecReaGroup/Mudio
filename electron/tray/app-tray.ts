@@ -1,8 +1,9 @@
-import { app, Menu, nativeImage, Tray, type NativeImage } from 'electron';
-import { MESSAGES } from '../../src/shared/i18n/message';
-import type { SettingStore } from '../setting/setting-store';
+import { app, ipcMain, nativeImage, screen, Tray, type NativeImage } from 'electron';
+import { IPC_CHANNEL } from '../../src/shared/contract/mudio-contract';
+import { log } from '../log/logger';
 import { APP_ICON_PATH } from '../window/app-window';
 import type { LibraryWindow } from '../window/library-window';
+import { TrayMenuWindow } from './tray-menu-window';
 
 // Windows draws tray icons at 16 logical px; one bitmap per common display scale keeps it sharp.
 const TRAY_ICON_SIZE = 16;
@@ -18,19 +19,22 @@ function createTrayIcon(): NativeImage {
   return icon;
 }
 
-/** Puts Mudio in the notification area: click to show the library, right-click to quit. */
-export function createAppTray(libraryWindow: LibraryWindow, settingStore: SettingStore): Tray {
+/** Puts Mudio in the notification area: click to show the library, right-click for the menu. */
+export function createAppTray(libraryWindow: LibraryWindow): Tray {
   const tray = new Tray(createTrayIcon());
+  const menu = new TrayMenuWindow();
   tray.setToolTip(app.getName());
   tray.on('click', () => libraryWindow.present());
-  // Built on demand so the labels follow the current language setting.
-  tray.on('right-click', () => {
-    const message = MESSAGES[settingStore.current().language].tray;
-    tray.popUpContextMenu(Menu.buildFromTemplate([
-      { label: message.showLibrary, click: () => libraryWindow.present() },
-      { type: 'separator' },
-      { label: message.quit, click: () => app.quit() },
-    ]));
+  tray.on('right-click', () => menu.popUpAt(screen.getCursorScreenPoint()));
+
+  ipcMain.on(IPC_CHANNEL.trayMenuOpenLibrary, () => {
+    menu.hide();
+    libraryWindow.present();
+  });
+  ipcMain.on(IPC_CHANNEL.trayMenuQuit, () => {
+    log('info', 'Tray', 'Quit from tray menu');
+    menu.hide();
+    app.quit();
   });
   return tray;
 }

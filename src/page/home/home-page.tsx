@@ -12,8 +12,8 @@ import { TEXT_FIELD_CLASS } from '../../shared/ui/control-class';
 import { NavList } from '../../shared/ui/nav-list';
 
 const LIBRARY_NAV: readonly { section: LibrarySection; icon: LucideIcon }[] = [
-  { section: 'all', icon: Youtube },
   { section: 'recent', icon: History },
+  { section: 'all', icon: Youtube },
   { section: 'playlist', icon: Copy },
 ];
 

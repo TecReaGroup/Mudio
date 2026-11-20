@@ -50,6 +50,10 @@ const mudioApi: MudioApi = {
   defaultPlayer: {
     openSetting: () => ipcRenderer.invoke(IPC_CHANNEL.defaultPlayerOpenSetting),
   },
+  trayMenu: {
+    openLibrary: () => ipcRenderer.send(IPC_CHANNEL.trayMenuOpenLibrary),
+    quit: () => ipcRenderer.send(IPC_CHANNEL.trayMenuQuit),
+  },
   pathForFile: file => webUtils.getPathForFile(file),
   log: (level, module, message) => ipcRenderer.send(IPC_CHANNEL.log, level, module, message),
 };

@@ -21,7 +21,7 @@ describe('library browsing', () => {
     installFakeMudio({ snapshot: buildScannedSnapshot({ videos: [BEACH_SUNSET, CITY_NIGHT, BEACH_PARTY] }) });
     await renderLibraryWindow();
 
-    expect(screen.getByRole('heading', { level: 1, name: 'Video' })).toBeDefined();
+    expect(screen.getByRole('heading', { level: 1, name: 'Library' })).toBeDefined();
     expect(screen.getByText('· 3 videos')).toBeDefined();
     expect(cardTitles()).toEqual(['Beach Sunset', 'City Night', 'beach party']);
   });
