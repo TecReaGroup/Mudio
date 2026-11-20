@@ -1,4 +1,4 @@
-import type { BrowserWindow } from 'electron';
+import { app, type BrowserWindow } from 'electron';
 import { IPC_CHANNEL } from '../../src/shared/contract/mudio-contract';
 import { log } from '../log/logger';
 import { createAppWindow, type AppWindowChrome } from './app-window';
@@ -13,14 +13,19 @@ const LIBRARY_WINDOW_CHROME: AppWindowChrome = {
 };
 
 /**
- * The single library window. While a video plays it hides and the app waits in the tray, so the taskbar shows only
- * the player; the player's back button, the tray icon or launching Mudio again brings it back.
+ * The single library window. Closing it, or playing a video, hides it while the app waits in the tray; the player's back
+ * button, the tray icon or launching Mudio again brings it back. Only quitting from the tray really closes it.
  */
 export class LibraryWindow {
   private window: BrowserWindow | null = null;
   private pendingVideoId: string | null = null;
   // Also stops a library created for a launch video from appearing on its first paint.
   private isWaitingInTray = false;
+  private isAppQuitting = false;
+
+  constructor() {
+    app.on('before-quit', () => { this.isAppQuitting = true; });
+  }
 
   /** Brings the library to the front, opening it if needed. */
   present(): void {
@@ -71,6 +76,13 @@ export class LibraryWindow {
     window.once('ready-to-show', () => {
       if (!this.isWaitingInTray) window.show();
     });
+    window.on('close', event => {
+      if (this.isAppQuitting) return;
+      event.preventDefault();
+      this.hide();
+    });
+    // Windows logoff or shutdown skips before-quit; a vetoed close here would hold the session open.
+    window.on('session-end', () => { this.isAppQuitting = true; });
     window.on('closed', () => {
       this.window = null;
       this.pendingVideoId = null;

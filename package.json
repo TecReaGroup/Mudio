@@ -52,8 +52,8 @@
     "fileAssociations": [
       { "ext": ["mp4", "m4v", "webm", "mkv", "mov", "ogv"], "name": "Mudio.Video", "description": "Video", "role": "Viewer" }
     ],
-    "win": { "target": ["nsis", "zip"], "artifactName": "${productName}-Portable-${version}.${ext}" },
-    "nsis": { "artifactName": "${productName} Setup ${version}.${ext}", "include": "build/installer.nsh", "oneClick": false, "allowToChangeInstallationDirectory": true, "differentialPackage": false },
+    "win": { "target": ["nsis", "zip"], "artifactName": "${productName}-${version}-Portable.${ext}" },
+    "nsis": { "artifactName": "${productName}-${version}-Setup.${ext}", "include": "build/installer.nsh", "oneClick": false, "allowToChangeInstallationDirectory": true, "differentialPackage": false },
     "mac": { "target": "dmg" },
     "linux": { "target": "AppImage" }
   }
