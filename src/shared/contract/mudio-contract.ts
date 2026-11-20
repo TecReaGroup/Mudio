@@ -170,7 +170,7 @@ export interface MudioApi {
     onOpenVideo(listener: (videoId: string) => void): Unsubscribe;
   };
   player: {
-    /** Plays in the player window, opening it if needed; the library window then waits minimized in the taskbar. */
+    /** Plays in the player window, opening it if needed; the library window then hides to the tray. */
     open(request: PlaybackRequest): Promise<void>;
     /** Request made before the player window's renderer was ready, consumed once. */
     takePendingRequest(): Promise<PlaybackRequest | null>;

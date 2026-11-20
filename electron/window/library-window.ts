@@ -13,40 +13,43 @@ const LIBRARY_WINDOW_CHROME: AppWindowChrome = {
 };
 
 /**
- * The single library window. While a video plays it waits minimized in the taskbar, so returning to it is one click
- * and closing it there (with the player closed too) quits the app.
+ * The single library window. While a video plays it hides and the app waits in the tray, so the taskbar shows only
+ * the player; the player's back button, the tray icon or launching Mudio again brings it back.
  */
 export class LibraryWindow {
   private window: BrowserWindow | null = null;
   private pendingVideoId: string | null = null;
-
-  isOpen(): boolean {
-    return this.window !== null;
-  }
+  // Also stops a library created for a launch video from appearing on its first paint.
+  private isWaitingInTray = false;
 
   /** Brings the library to the front, opening it if needed. */
   present(): void {
+    this.isWaitingInTray = false;
     if (!this.window) {
       this.window = this.createWindow();
       return;
     }
     if (this.window.isMinimized()) this.window.restore();
-    // NOTE: show() as well as focus(): focus() is a no-op on a window that has not appeared yet.
     this.window.show();
     this.window.focus();
   }
 
   /** Steps aside for the player; a closed library stays closed. */
-  minimize(): void {
-    this.window?.minimize();
+  hide(): void {
+    this.isWaitingInTray = true;
+    this.window?.hide();
+  }
+
+  isOpen(): boolean {
+    return this.window !== null;
   }
 
   /** Hands an OS-opened video to the library, which builds its queue and starts the player. */
   openVideo(videoId: string): void {
     if (!this.window) {
-      this.window = this.createWindow();
       // The player is about to take the front, so the library never needs to appear.
-      this.window.minimize();
+      this.isWaitingInTray = true;
+      this.window = this.createWindow();
     }
     // A renderer still loading cannot receive events yet; it pulls the pending id once mounted.
     if (this.window.webContents.isLoading()) {
@@ -65,9 +68,8 @@ export class LibraryWindow {
   private createWindow(): BrowserWindow {
     log('info', 'Window', 'Open library window');
     const window = createAppWindow(LIBRARY_WINDOW_CHROME);
-    // Showing a minimized window would restore it in front of the player.
     window.once('ready-to-show', () => {
-      if (!window.isMinimized()) window.show();
+      if (!this.isWaitingInTray) window.show();
     });
     window.on('closed', () => {
       this.window = null;

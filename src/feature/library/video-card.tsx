@@ -19,7 +19,8 @@ interface VideoCardProps {
   video: VideoEntry;
   /** Callbacks must be stable across renders, or memoization is lost for the whole grid. */
   onPlay: (videoId: string) => void;
-  onEdit: (videoId: string) => void;
+  /** Recent omits this: it only lists what was played, so its cards are not edited. */
+  onEdit?: (videoId: string) => void;
   /** Only Recent passes this: it forgets the playback record, never the video or its file. */
   onRemoveFromRecent?: (videoId: string) => void;
 }
@@ -30,9 +31,11 @@ export const VideoCard = memo(function VideoCard({ video, onPlay, onEdit, onRemo
 
   const actions = (
     <>
-      <IconButton size="md" label={libraryMessage.edit.action} onClick={() => onEdit(video.id)}>
-        <Pencil />
-      </IconButton>
+      {onEdit && (
+        <IconButton size="md" label={libraryMessage.edit.action} onClick={() => onEdit(video.id)}>
+          <Pencil />
+        </IconButton>
+      )}
       {onRemoveFromRecent && (
         <IconButton size="md" tone="quietDanger" label={libraryMessage.removeFromRecent} onClick={() => onRemoveFromRecent(video.id)}>
           <Trash2 />

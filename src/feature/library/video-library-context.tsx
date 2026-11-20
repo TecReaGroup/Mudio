@@ -7,6 +7,8 @@ import { arrangeIds } from '../../shared/lib/order';
 interface VideoLibraryContextValue {
   /** Library order. Mutations go through mudio.library; this list updates from main-process pushes. */
   videos: VideoEntry[];
+  /** Videos found under library folders, in library order; directly opened files only reach Recent. */
+  folderVideos: VideoEntry[];
   /** Played videos in Recent's order. */
   recentVideos: VideoEntry[];
   playlists: Playlist[];
@@ -91,8 +93,10 @@ export function VideoLibraryProvider({ children }: { children: ReactNode }) {
       log('error', 'Library', `Failed to save order: ${describeError(error)}`);
       mudio.library.list().then(setSnapshot).catch(() => undefined);
     };
+    const folderVideoIds = new Set((snapshot?.folders ?? []).flatMap(folder => folder.videoIds));
     return {
       videos,
+      folderVideos: videos.filter(video => folderVideoIds.has(video.id)),
       recentVideos: (snapshot?.recentIds ?? []).map(findVideo).filter((video): video is VideoEntry => video !== undefined),
       playlists: snapshot?.playlists ?? [],
       folders: snapshot?.folders ?? [],

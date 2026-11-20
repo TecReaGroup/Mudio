@@ -12,7 +12,7 @@ const BUNDLE_DIRECTORY = dirname(fileURLToPath(import.meta.url));
 const IS_MAC = process.platform === 'darwin';
 const RENDERER_DIRECTORY = join(BUNDLE_DIRECTORY, '../renderer');
 // Vite serves public/ in dev and copies it into dist/renderer/ for production builds.
-const WINDOW_ICON_PATH = process.env.VITE_DEV_SERVER_URL
+export const APP_ICON_PATH = process.env.VITE_DEV_SERVER_URL
   ? join(BUNDLE_DIRECTORY, '../../public/icon.png')
   : join(RENDERER_DIRECTORY, 'icon.png');
 
@@ -33,7 +33,7 @@ export function createAppWindow(chrome: AppWindowChrome): BrowserWindow {
   const window = new BrowserWindow({
     ...chrome.size,
     title: 'Mudio',
-    icon: WINDOW_ICON_PATH,
+    icon: APP_ICON_PATH,
     show: false,
     backgroundColor: chrome.backgroundColor,
     titleBarStyle: 'hidden',

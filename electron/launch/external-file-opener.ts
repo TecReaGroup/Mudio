@@ -2,6 +2,7 @@ import { ipcMain } from 'electron';
 import { IPC_CHANNEL } from '../../src/shared/contract/mudio-contract';
 import { isSupportedVideoPath, type VideoLibrary } from '../library/video-library';
 import { log } from '../log/logger';
+import type { PlayerWindow } from '../player/player-window';
 import type { LibraryWindow } from '../window/library-window';
 
 export function videoPathsFromArgv(argv: string[]): string[] {
@@ -13,6 +14,7 @@ export class ExternalFileOpener {
   constructor(
     private readonly library: VideoLibrary,
     private readonly libraryWindow: LibraryWindow,
+    private readonly playerWindow: PlayerWindow,
   ) {}
 
   async open(filePaths: string[]): Promise<void> {
@@ -20,6 +22,7 @@ export class ExternalFileOpener {
     const [firstVideo] = await this.library.importPaths(filePaths);
     if (!firstVideo) return;
     log('info', 'Launch', `Open requested for video ${firstVideo.id}`);
+    this.playerWindow.prepare();
     this.libraryWindow.openVideo(firstVideo.id);
   }
 }

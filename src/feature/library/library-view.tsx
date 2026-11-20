@@ -23,13 +23,13 @@ interface LibraryViewProps {
 }
 
 export function LibraryView({ collection, searchQuery, onClearSearch, onPlay }: LibraryViewProps) {
-  const { videos, recentVideos, findVideo, arrangeVideos, arrangeRecent, removeFromRecent, loadError } = useVideoLibrary();
+  const { folderVideos, recentVideos, findVideo, arrangeVideos, arrangeRecent, removeFromRecent, loadError } = useVideoLibrary();
   const [editingVideoId, setEditingVideoId] = useState<string | null>(null);
   // Looked up on every render, so the dialog closes itself if the video is removed meanwhile.
   const editingVideo = editingVideoId === null ? undefined : findVideo(editingVideoId);
   const message = useMessage();
   const libraryMessage = message.library;
-  const orderedVideos = collection === 'all' ? videos : recentVideos;
+  const orderedVideos = collection === 'all' ? folderVideos : recentVideos;
   // The input updates immediately; filtering a large grid follows at lower priority so typing never stalls.
   const trimmedQuery = useDeferredValue(searchQuery).trim();
   const normalizedQuery = trimmedQuery.toLowerCase();
@@ -84,7 +84,7 @@ export function LibraryView({ collection, searchQuery, onClearSearch, onPlay }: 
                 key={video.id}
                 video={video}
                 onPlay={onPlay}
-                onEdit={setEditingVideoId}
+                onEdit={collection === 'all' ? setEditingVideoId : undefined}
                 onRemoveFromRecent={collection === 'recent' ? removeFromRecent : undefined}
               />
             ))}

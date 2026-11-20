@@ -11,6 +11,7 @@ import type {
 export const LONG_UNBROKEN_TEXT = 'A'.repeat(300);
 
 const MEBIBYTE = 1024 * 1024;
+const SCANNED_FOLDER_PATH = 'D:\\Videos';
 
 /** Ids are "v1", "v2", …; title and path derive from the index unless overridden. */
 export function buildVideo(index: number, overrides: Partial<VideoEntry> = {}): VideoEntry {
@@ -43,6 +44,12 @@ export function buildFolder(path: string, videoIds: string[], playlistTitles: st
 
 export function buildSnapshot(overrides: Partial<LibrarySnapshot> = {}): LibrarySnapshot {
   return { videos: [], recentIds: [], playlists: [], folders: [], ...overrides };
+}
+
+/** Every video was found by scanning one library folder, so the Video section lists them all. */
+export function buildScannedSnapshot(overrides: Partial<LibrarySnapshot> = {}): LibrarySnapshot {
+  const videoIds = (overrides.videos ?? []).map(video => video.id);
+  return buildSnapshot({ folders: [buildFolder(SCANNED_FOLDER_PATH, videoIds)], ...overrides });
 }
 
 /** English, so assertions read the same as the source strings in message.ts. */

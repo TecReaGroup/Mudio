@@ -34,6 +34,11 @@ export class PlayerWindow {
     }
   }
 
+  /** Opens the window ahead of its first request, so its renderer boots alongside the library's instead of after it. */
+  prepare(): void {
+    if (!this.window) this.createWindow();
+  }
+
   returnToLibrary(): void {
     log('info', 'Player', 'Return to library');
     // Present the library first so closing the last window never triggers window-all-closed and quits the app.
@@ -51,12 +56,12 @@ export class PlayerWindow {
     if (window.isMinimized()) window.restore();
     window.show();
     window.focus();
-    this.libraryWindow.minimize();
+    this.libraryWindow.hide();
   }
 
   private createWindow(): BrowserWindow {
     const window = createAppWindow(PLAYER_WINDOW_CHROME);
-    // Waits for the first paint, so the library never minimizes onto an empty desktop.
+    // Waits for the first paint, so the library never hides onto an empty desktop.
     window.once('ready-to-show', () => this.bringToFront(window));
     window.on('closed', () => {
       this.window = null;

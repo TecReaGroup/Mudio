@@ -1,7 +1,7 @@
 import { act, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { installFakeMudio } from '../../support/fake-mudio';
-import { buildFolder, buildPlaylist, buildSnapshot, buildVideo } from '../../support/fixture';
+import { buildFolder, buildPlaylist, buildScannedSnapshot, buildVideo } from '../../support/fixture';
 import { renderLibraryWindow } from '../../support/render-app';
 
 const TRIP_CLIP = buildVideo(1, { title: 'Trip Clip', filePath: 'D:\\Videos\\Holiday\\trip.mp4' });
@@ -16,7 +16,7 @@ async function openEditDialog(user: Awaited<ReturnType<typeof renderLibraryWindo
 
 describe('editing a video', () => {
   it('starts with the title focused and saves the trimmed title', async () => {
-    const fake = installFakeMudio({ snapshot: buildSnapshot({ videos: [TRIP_CLIP] }) });
+    const fake = installFakeMudio({ snapshot: buildScannedSnapshot({ videos: [TRIP_CLIP] }) });
     const user = await renderLibraryWindow();
     const dialog = await openEditDialog(user, 'Trip Clip');
     const titleInput = within(dialog).getByLabelText('Title');
@@ -31,7 +31,7 @@ describe('editing a video', () => {
   });
 
   it('disables Save while the title is blank', async () => {
-    installFakeMudio({ snapshot: buildSnapshot({ videos: [TRIP_CLIP] }) });
+    installFakeMudio({ snapshot: buildScannedSnapshot({ videos: [TRIP_CLIP] }) });
     const user = await renderLibraryWindow();
     const dialog = await openEditDialog(user, 'Trip Clip');
 
@@ -42,7 +42,7 @@ describe('editing a video', () => {
   });
 
   it('submits with Enter in the title field', async () => {
-    const fake = installFakeMudio({ snapshot: buildSnapshot({ videos: [TRIP_CLIP] }) });
+    const fake = installFakeMudio({ snapshot: buildScannedSnapshot({ videos: [TRIP_CLIP] }) });
     const user = await renderLibraryWindow();
     await openEditDialog(user, 'Trip Clip');
 
@@ -52,7 +52,7 @@ describe('editing a video', () => {
   });
 
   it('discards changes on Cancel', async () => {
-    const fake = installFakeMudio({ snapshot: buildSnapshot({ videos: [TRIP_CLIP] }) });
+    const fake = installFakeMudio({ snapshot: buildScannedSnapshot({ videos: [TRIP_CLIP] }) });
     const user = await renderLibraryWindow();
     const dialog = await openEditDialog(user, 'Trip Clip');
 
@@ -64,11 +64,11 @@ describe('editing a video', () => {
   });
 
   it('closes by itself when the video is removed while editing', async () => {
-    const fake = installFakeMudio({ snapshot: buildSnapshot({ videos: [TRIP_CLIP, OTHER_CLIP] }) });
+    const fake = installFakeMudio({ snapshot: buildScannedSnapshot({ videos: [TRIP_CLIP, OTHER_CLIP] }) });
     const user = await renderLibraryWindow();
     await openEditDialog(user, 'Trip Clip');
 
-    act(() => fake.pushLibrary(buildSnapshot({ videos: [OTHER_CLIP] })));
+    act(() => fake.pushLibrary(buildScannedSnapshot({ videos: [OTHER_CLIP] })));
 
     expect(screen.queryByRole('dialog')).toBeNull();
   });
@@ -76,7 +76,7 @@ describe('editing a video', () => {
 
 describe('playlist picker', () => {
   it('creates a new playlist from typed text with Enter', async () => {
-    const fake = installFakeMudio({ snapshot: buildSnapshot({ videos: [TRIP_CLIP] }) });
+    const fake = installFakeMudio({ snapshot: buildScannedSnapshot({ videos: [TRIP_CLIP] }) });
     const user = await renderLibraryWindow();
     const dialog = await openEditDialog(user, 'Trip Clip');
     const combobox = within(dialog).getByRole('combobox', { name: 'Playlists' });
@@ -96,7 +96,7 @@ describe('playlist picker', () => {
 
   it('suggests only playlists the video is not in yet, filtered by the typed text', async () => {
     installFakeMudio({
-      snapshot: buildSnapshot({
+      snapshot: buildScannedSnapshot({
         videos: [TRIP_CLIP, OTHER_CLIP],
         playlists: [
           buildPlaylist('p1', 'Favorites', [TRIP_CLIP.id]),
@@ -117,7 +117,7 @@ describe('playlist picker', () => {
 
   it('picks the only remaining suggestion with Enter instead of creating a duplicate', async () => {
     const fake = installFakeMudio({
-      snapshot: buildSnapshot({ videos: [TRIP_CLIP, OTHER_CLIP], playlists: [buildPlaylist('p1', 'Road Trip', [OTHER_CLIP.id])] }),
+      snapshot: buildScannedSnapshot({ videos: [TRIP_CLIP, OTHER_CLIP], playlists: [buildPlaylist('p1', 'Road Trip', [OTHER_CLIP.id])] }),
     });
     const user = await renderLibraryWindow();
     const dialog = await openEditDialog(user, 'Trip Clip');
@@ -131,7 +131,7 @@ describe('playlist picker', () => {
   // Typing an existing name in another case is far more likely a lookup than a request for a near-duplicate.
   it('picks an existing playlist whose name differs only in case instead of creating a near-duplicate', async () => {
     const fake = installFakeMudio({
-      snapshot: buildSnapshot({ videos: [TRIP_CLIP, OTHER_CLIP], playlists: [buildPlaylist('p1', 'Road Trip', [OTHER_CLIP.id])] }),
+      snapshot: buildScannedSnapshot({ videos: [TRIP_CLIP, OTHER_CLIP], playlists: [buildPlaylist('p1', 'Road Trip', [OTHER_CLIP.id])] }),
     });
     const user = await renderLibraryWindow();
     const dialog = await openEditDialog(user, 'Trip Clip');
@@ -144,7 +144,7 @@ describe('playlist picker', () => {
 
   it('shows folder playlists as locked chips that Backspace and the chip buttons cannot remove', async () => {
     const fake = installFakeMudio({
-      snapshot: buildSnapshot({
+      snapshot: buildScannedSnapshot({
         videos: [TRIP_CLIP],
         playlists: [buildPlaylist('p1', 'Holiday', [TRIP_CLIP.id]), buildPlaylist('p2', 'Favorites', [TRIP_CLIP.id])],
         folders: [buildFolder('D:\\Videos\\Holiday', [TRIP_CLIP.id], ['Holiday'])],
@@ -167,7 +167,7 @@ describe('playlist picker', () => {
   // jsdom never turns Escape into a dialog "cancel", so only the dropdown half of this contract is observable here.
   it('closes the dropdown on Escape', async () => {
     installFakeMudio({
-      snapshot: buildSnapshot({ videos: [TRIP_CLIP, OTHER_CLIP], playlists: [buildPlaylist('p1', 'Road Trip', [OTHER_CLIP.id])] }),
+      snapshot: buildScannedSnapshot({ videos: [TRIP_CLIP, OTHER_CLIP], playlists: [buildPlaylist('p1', 'Road Trip', [OTHER_CLIP.id])] }),
     });
     const user = await renderLibraryWindow();
     const dialog = await openEditDialog(user, 'Trip Clip');
@@ -185,7 +185,7 @@ describe('playlist picker', () => {
     /** Places the picker field at `fieldTop` in a 768px-tall window (jsdom's default) before it opens. */
     async function openPickerAt(fieldTop: number) {
       installFakeMudio({
-        snapshot: buildSnapshot({ videos: [TRIP_CLIP, OTHER_CLIP], playlists: [buildPlaylist('p1', 'Road Trip', [OTHER_CLIP.id])] }),
+        snapshot: buildScannedSnapshot({ videos: [TRIP_CLIP, OTHER_CLIP], playlists: [buildPlaylist('p1', 'Road Trip', [OTHER_CLIP.id])] }),
       });
       const user = await renderLibraryWindow();
       const dialog = await openEditDialog(user, 'Trip Clip');

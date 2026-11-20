@@ -93,6 +93,10 @@ const ZH_CN = {
     importFolder: '导入文件夹',
     addLibraryFolder: '添加媒体库文件夹',
   },
+  tray: {
+    showLibrary: '打开 Mudio',
+    quit: '退出 Mudio',
+  },
 };
 
 export type Messages = typeof ZH_CN;
@@ -189,6 +193,10 @@ const EN: Messages = {
     openVideo: 'Open Videos',
     importFolder: 'Import Folder',
     addLibraryFolder: 'Add Library Folder',
+  },
+  tray: {
+    showLibrary: 'Open Mudio',
+    quit: 'Quit Mudio',
   },
 };
 
