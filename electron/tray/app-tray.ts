@@ -1,4 +1,4 @@
-import { app, ipcMain, nativeImage, screen, Tray, type NativeImage } from 'electron';
+import { app, ipcMain, nativeImage, Tray, type NativeImage } from 'electron';
 import { IPC_CHANNEL } from '../../src/shared/contract/mudio-contract';
 import { log } from '../log/logger';
 import { APP_ICON_PATH } from '../window/app-window';
@@ -25,15 +25,15 @@ export function createAppTray(libraryWindow: LibraryWindow): Tray {
   const menu = new TrayMenuWindow();
   tray.setToolTip(app.getName());
   tray.on('click', () => libraryWindow.present());
-  tray.on('right-click', () => menu.popUpAt(screen.getCursorScreenPoint()));
+  tray.on('right-click', () => menu.openBeside(tray.getBounds()));
 
   ipcMain.on(IPC_CHANNEL.trayMenuOpenLibrary, () => {
-    menu.hide();
+    menu.close();
     libraryWindow.present();
   });
   ipcMain.on(IPC_CHANNEL.trayMenuQuit, () => {
     log('info', 'Tray', 'Quit from tray menu');
-    menu.hide();
+    menu.close();
     app.quit();
   });
   return tray;

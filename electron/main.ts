@@ -78,7 +78,9 @@ function startApp(): void {
       library.dropMissingRecent()
         .catch(error => log('error', 'Library', `Startup Recent check failed: ${describeError(error)}`));
       app.on('activate', () => {
-        if (!BrowserWindow.getAllWindows().some(window => window.isVisible())) libraryWindow.present();
+        // Opacity too: the closed tray menu stays shown, just fully transparent.
+        const isAnyWindowSeen = BrowserWindow.getAllWindows().some(window => window.isVisible() && window.getOpacity() > 0);
+        if (!isAnyWindowSeen) libraryWindow.present();
       });
     })
     .catch(error => {
