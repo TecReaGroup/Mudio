@@ -17,7 +17,7 @@ interface EmptyStateProps {
 export function EmptyState({ title, hint, action }: EmptyStateProps) {
   return (
     <div className="flex h-full min-h-60 animate-fade-in flex-col items-center justify-center px-6 pb-16 text-center">
-      <p className={TEXT_CLASS.label}>{title}</p>
+      <p className={`max-w-full wrap-anywhere ${TEXT_CLASS.label}`}>{title}</p>
       {hint && <p className={`mt-1.5 max-w-sm ${TEXT_CLASS.meta}`}>{hint}</p>}
       {action && <div className="mt-5">{action}</div>}
     </div>

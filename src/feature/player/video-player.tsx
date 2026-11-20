@@ -18,6 +18,7 @@ import { PRESS_HOLD_RATE, useVideoPressGesture } from './use-video-press-gesture
 
 const SEEK_STEP_SEC = 5;
 const VOLUME_STEP = 0.1;
+const VOLUME_PRECISION = 100;
 // Short stalls resolve on their own; only show the spinner when waiting is noticeable.
 const BUFFERING_INDICATOR_DELAY_MS = 400;
 // Kept across videos (the player remounts per video) for the lifetime of the window.
@@ -102,7 +103,11 @@ export function VideoPlayer({ video, autoPlay, onPrevious, onNext, loop, onEnded
       element.currentTime = clamp(timeSec, 0, element.duration || 0);
       updateState({ currentTime: element.currentTime });
     },
-    setVolume: volume => updateState({ volume: clamp(volume, 0, 1), isMuted: volume === 0 }),
+    setVolume: requestedVolume => {
+      // Snap away float drift from repeated ±VOLUME_STEP, so stepping down lands exactly on 0 and mutes.
+      const volume = clamp(Math.round(requestedVolume * VOLUME_PRECISION) / VOLUME_PRECISION, 0, 1);
+      updateState({ volume, isMuted: volume === 0 });
+    },
     toggleMute: () => setState(current => ({ ...current, isMuted: !current.isMuted })),
     setPlaybackRate: playbackRate => updateState({ playbackRate }),
     toggleFullscreen: () => {

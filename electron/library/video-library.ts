@@ -41,6 +41,16 @@ interface LibraryDocument {
   playlists?: Playlist[];
 }
 
+function emptyLibraryDocument(): LibraryDocument {
+  return { version: LIBRARY_DOCUMENT_VERSION, videos: [] };
+}
+
+/** Valid JSON of the wrong shape (null, [], {}) yields an empty library: a throw here would abort startup. */
+function parseLibraryDocument(value: unknown): LibraryDocument {
+  const isLibraryShaped = typeof value === 'object' && value !== null && Array.isArray((value as LibraryDocument).videos);
+  return isLibraryShaped ? value as LibraryDocument : emptyLibraryDocument();
+}
+
 /** Recent's order before the user could arrange it: most recently played first. */
 function recentIdsByPlayTime(videos: VideoEntry[]): string[] {
   return videos
@@ -168,7 +178,7 @@ export class VideoLibrary {
   static async open(dataDirectory: string, onChange: (snapshot: LibrarySnapshot) => void): Promise<VideoLibrary> {
     const document = new JsonFile<LibraryDocument>(join(dataDirectory, LIBRARY_FILE_NAME));
     const { version, videos, folders = [], recentIds, playlists = [] } =
-      await document.read({ version: LIBRARY_DOCUMENT_VERSION, videos: [] });
+      parseLibraryDocument(await document.read(emptyLibraryDocument()));
     const thumbnailDirectory = join(dataDirectory, THUMBNAIL_DIRECTORY_NAME);
     await mkdir(thumbnailDirectory, { recursive: true });
     log('info', 'Library', `Loaded ${videos.length} videos from ${folders.length} library folders`);

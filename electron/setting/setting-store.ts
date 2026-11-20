@@ -31,6 +31,19 @@ function parseSetting(value: unknown): AppSetting {
   };
 }
 
+/** Keeps each valid stored field and falls back per field, so one bad value (e.g. an unknown language) cannot crash rendering. */
+function storedSettingOverDefaults(stored: unknown): AppSetting {
+  const fallback = defaultSetting();
+  const candidate = (typeof stored === 'object' && stored !== null ? stored : {}) as Partial<Record<keyof AppSetting, unknown>>;
+  return {
+    language: LANGUAGES.includes(candidate.language as Language) ? candidate.language as Language : fallback.language,
+    playbackOrder: PLAYBACK_ORDERS.includes(candidate.playbackOrder as PlaybackOrder)
+      ? candidate.playbackOrder as PlaybackOrder
+      : fallback.playbackOrder,
+    resumePlayback: typeof candidate.resumePlayback === 'boolean' ? candidate.resumePlayback : fallback.resumePlayback,
+  };
+}
+
 /** Owns persisted user settings. */
 export class SettingStore {
   private constructor(
@@ -42,7 +55,7 @@ export class SettingStore {
   static async open(dataDirectory: string, onChanged: (setting: AppSetting) => void): Promise<SettingStore> {
     const document = new JsonFile<Partial<AppSetting>>(join(dataDirectory, SETTING_FILE_NAME));
     const stored = await document.read({});
-    return new SettingStore(document, { ...defaultSetting(), ...stored }, onChanged);
+    return new SettingStore(document, storedSettingOverDefaults(stored), onChanged);
   }
 
   current(): AppSetting {

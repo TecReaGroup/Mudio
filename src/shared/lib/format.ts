@@ -12,7 +12,8 @@ export function formatDuration(totalSeconds: number): string {
 export function formatFileSize(bytes: number): string {
   let value = bytes;
   let unitIndex = 0;
-  while (value >= 1024 && unitIndex < BYTE_UNITS.length - 1) {
+  // Compare the displayed value, so 1023.96 KB rolls over to "1.0 MB" instead of showing "1024.0 KB".
+  while (Number(value.toFixed(1)) >= 1024 && unitIndex < BYTE_UNITS.length - 1) {
     value /= 1024;
     unitIndex += 1;
   }

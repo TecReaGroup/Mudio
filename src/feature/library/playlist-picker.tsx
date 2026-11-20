@@ -53,7 +53,10 @@ export function PlaylistPicker({ selectedTitles, lockedTitles, existingTitles, d
   const removableTitles = selectedTitles.filter(title => !locked.has(title));
   // Picked playlists live as chips in the field, so the dropdown only offers the rest.
   const suggestions = existingTitles.filter(title => !selected.has(title) && title.toLowerCase().includes(normalizedQuery));
-  const canCreate = trimmedQuery !== '' && !selected.has(trimmedQuery) && !existingTitles.includes(trimmedQuery);
+  // Matched case-insensitively: "road trip" is far more likely a lookup of "Road Trip" than a near-duplicate.
+  const hasTitle = (titles: string[]) => titles.some(title => title.toLowerCase() === normalizedQuery);
+  const existingMatch = existingTitles.find(title => title.toLowerCase() === normalizedQuery && !selected.has(title));
+  const canCreate = trimmedQuery !== '' && !hasTitle(selectedTitles) && !hasTitle(existingTitles);
   const isFirstPlaylist = existingTitles.length === 0 && selectedTitles.length === 0 && !canCreate;
 
   const select = (title: string) => {
@@ -81,7 +84,8 @@ export function PlaylistPicker({ selectedTitles, lockedTitles, existingTitles, d
     if (event.key === 'Enter') {
       // Enter picks a playlist here; it must not submit the form.
       event.preventDefault();
-      if (canCreate) select(trimmedQuery);
+      if (existingMatch) select(existingMatch);
+      else if (canCreate) select(trimmedQuery);
       else if (suggestions.length === 1) select(suggestions[0]);
     } else if (event.key === 'Escape' && isOpen) {
       // Only the dropdown closes; a second Escape reaches the dialog.
