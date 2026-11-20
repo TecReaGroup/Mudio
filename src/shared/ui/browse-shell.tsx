@@ -22,7 +22,7 @@ export function BrowseShell({ sidebar, topBarStart, sidebarFooter, topBarCenter,
       {/*
         Spans the whole window so the center slot is centered on the window, not the content column.
         Equal side columns keep it centered; each is at least as wide as the sidebar and the native caption buttons.
-        Height must match TITLE_BAR_HEIGHT in electron/window/main-window.ts.
+        Height must match TITLE_BAR_HEIGHT in electron/window/library-window.ts.
       */}
       <header className="drag-region grid h-14 shrink-0 border-b border-line grid-cols-[minmax(var(--side),1fr)_minmax(0,28rem)_minmax(var(--side),1fr)] items-center gap-3 [--side:max(15rem,var(--titlebar-inset-end))]">
         <div className="flex items-center gap-2.5 pl-[max(20px,var(--titlebar-inset-start))]">

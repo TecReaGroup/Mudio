@@ -170,12 +170,12 @@ export interface MudioApi {
     onOpenVideo(listener: (videoId: string) => void): Unsubscribe;
   };
   player: {
-    /** Plays in the player window, opening it if needed. */
+    /** Plays in the player window, opening it if needed; the library window then waits minimized in the taskbar. */
     open(request: PlaybackRequest): Promise<void>;
     /** Request made before the player window's renderer was ready, consumed once. */
     takePendingRequest(): Promise<PlaybackRequest | null>;
     onPlay(listener: (request: PlaybackRequest) => void): Unsubscribe;
-    /** Closes the player window and brings the library window to the front. */
+    /** Closes the player window and brings the library window back to the front. */
     returnToLibrary(): void;
   };
   /** Windows only: apps cannot claim file types themselves, so this opens Settings at Mudio's default-app page. */

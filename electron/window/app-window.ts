@@ -28,7 +28,7 @@ export interface AppWindowChrome {
   viewHash: string;
 }
 
-/** Frameless app window with the shared security, navigation and loading setup. */
+/** Frameless, initially hidden app window with the shared security, navigation and loading setup; the owner decides when it appears. */
 export function createAppWindow(chrome: AppWindowChrome): BrowserWindow {
   const window = new BrowserWindow({
     ...chrome.size,
@@ -48,8 +48,6 @@ export function createAppWindow(chrome: AppWindowChrome): BrowserWindow {
       autoplayPolicy: 'no-user-gesture-required',
     },
   });
-
-  window.once('ready-to-show', () => window.show());
 
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   // Dropping a file outside the drop zone would otherwise navigate away from the app.

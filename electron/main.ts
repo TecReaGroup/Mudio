@@ -9,7 +9,11 @@ import { describeError, log } from './log/logger';
 import { handleMediaProtocol, registerMediaScheme } from './media/media-protocol';
 import { PlayerWindow, registerPlayerIpc } from './player/player-window';
 import { registerSettingIpc, SettingStore } from './setting/setting-store';
-import { createMainWindow } from './window/main-window';
+import { LibraryWindow } from './window/library-window';
+
+// Must equal build.appId in package.json: the installer stamps it on the shortcuts, and a mismatch makes Windows
+// show the pinned shortcut and the running app as two separate taskbar icons.
+const APP_USER_MODEL_ID = 'com.mudio.app';
 
 function broadcast(channel: string, payload: unknown): void {
   for (const window of BrowserWindow.getAllWindows()) window.webContents.send(channel, payload);
@@ -17,22 +21,8 @@ function broadcast(channel: string, payload: unknown): void {
 
 function startApp(): void {
   const earlyOpenPaths = videoPathsFromArgv(process.argv);
-  let mainWindow: BrowserWindow | null = null;
+  const libraryWindow = new LibraryWindow();
   let opener: ExternalFileOpener | null = null;
-
-  const showMainWindow = () => {
-    mainWindow = createMainWindow();
-    mainWindow.on('closed', () => { mainWindow = null; });
-  };
-
-  const showLibrary = () => {
-    if (!mainWindow) return showMainWindow();
-    if (mainWindow.isMinimized()) mainWindow.restore();
-    // NOTE: show(), not just focus(): on a cold start from a file the player opens before the main window's
-    // ready-to-show, which then never shows it, and focus() is a no-op on a hidden window.
-    mainWindow.show();
-    mainWindow.focus();
-  };
 
   // macOS delivers file-association opens via this event, possibly before "ready".
   app.on('open-file', (event, filePath) => {
@@ -41,10 +31,12 @@ function startApp(): void {
     else earlyOpenPaths.push(filePath);
   });
 
+  // Launching Mudio again opens the file it was given, or brings back the library from wherever it waits.
   app.on('second-instance', (_event, argv) => {
-    if (mainWindow?.isMinimized()) mainWindow.restore();
-    mainWindow?.focus();
-    void opener?.open(videoPathsFromArgv(argv));
+    if (!opener) return;
+    const videoPaths = videoPathsFromArgv(argv);
+    if (videoPaths.length > 0) void opener.open(videoPaths);
+    else libraryWindow.present();
   });
 
   app.on('window-all-closed', () => {
@@ -58,23 +50,24 @@ function startApp(): void {
       const library = await VideoLibrary.open(dataDirectory, snapshot => broadcast(IPC_CHANNEL.libraryChanged, snapshot));
       // Every window holds its own copy of the settings; a stale copy would overwrite newer changes on save.
       const settingStore = await SettingStore.open(dataDirectory, setting => broadcast(IPC_CHANNEL.settingChanged, setting));
-      opener = new ExternalFileOpener(library, () => mainWindow);
+      opener = new ExternalFileOpener(library, libraryWindow);
 
       handleMediaProtocol(library);
       registerLibraryIpc(library, settingStore);
       registerSettingIpc(settingStore);
-      registerLaunchIpc(opener);
+      registerLaunchIpc(libraryWindow);
       registerDefaultPlayerIpc();
-      registerPlayerIpc(new PlayerWindow(showLibrary));
+      registerPlayerIpc(new PlayerWindow(libraryWindow));
       registerLogIpc();
 
       await opener.open(earlyOpenPaths);
-      showMainWindow();
+      // A video opened at launch has already started the library, minimized behind the player.
+      if (!libraryWindow.isOpen()) libraryWindow.present();
       // In the background: new videos stream into the open window instead of delaying it.
       library.rescanFolders()
         .catch(error => log('error', 'Library', `Startup folder rescan failed: ${describeError(error)}`));
       app.on('activate', () => {
-        if (!mainWindow) showMainWindow();
+        if (BrowserWindow.getAllWindows().length === 0) libraryWindow.present();
       });
     })
     .catch(error => {
@@ -84,6 +77,7 @@ function startApp(): void {
 }
 
 registerMediaScheme();
+if (process.platform === 'win32') app.setAppUserModelId(APP_USER_MODEL_ID);
 
 if (app.requestSingleInstanceLock()) startApp();
 else app.quit();

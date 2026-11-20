@@ -3,6 +3,7 @@ import { IPC_CHANNEL, PLAYER_VIEW_HASH, type PlaybackRequest } from '../../src/s
 import { log } from '../log/logger';
 import { expectString, expectStringArray } from '../shared/ipc-payload';
 import { createAppWindow, type AppWindowChrome } from '../window/app-window';
+import type { LibraryWindow } from '../window/library-window';
 
 const PLAYER_WINDOW_CHROME: AppWindowChrome = {
   size: { width: 1280, height: 760, minWidth: 720, minHeight: 420 },
@@ -18,10 +19,11 @@ export class PlayerWindow {
   private window: BrowserWindow | null = null;
   private pendingRequest: PlaybackRequest | null = null;
 
-  constructor(private readonly showLibrary: () => void) {}
+  constructor(private readonly libraryWindow: LibraryWindow) {}
 
   open(request: PlaybackRequest): void {
     log('info', 'Player', `Open video ${request.videoId} in a playlist of ${request.playlistIds.length}`);
+    if (this.window) this.bringToFront(this.window);
     const window = this.window ?? this.createWindow();
 
     // A renderer still loading cannot receive events yet; it pulls the pending request once mounted.
@@ -30,14 +32,12 @@ export class PlayerWindow {
     } else {
       window.webContents.send(IPC_CHANNEL.playerPlay, request);
     }
-    if (window.isMinimized()) window.restore();
-    window.focus();
   }
 
   returnToLibrary(): void {
     log('info', 'Player', 'Return to library');
-    // Show the library first so closing the last window never triggers window-all-closed and quits the app.
-    this.showLibrary();
+    // Present the library first so closing the last window never triggers window-all-closed and quits the app.
+    this.libraryWindow.present();
     this.window?.close();
   }
 
@@ -47,8 +47,17 @@ export class PlayerWindow {
     return request;
   }
 
+  private bringToFront(window: BrowserWindow): void {
+    if (window.isMinimized()) window.restore();
+    window.show();
+    window.focus();
+    this.libraryWindow.minimize();
+  }
+
   private createWindow(): BrowserWindow {
     const window = createAppWindow(PLAYER_WINDOW_CHROME);
+    // Waits for the first paint, so the library never minimizes onto an empty desktop.
+    window.once('ready-to-show', () => this.bringToFront(window));
     window.on('closed', () => {
       this.window = null;
       this.pendingRequest = null;
