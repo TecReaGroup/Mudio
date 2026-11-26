@@ -8,6 +8,7 @@ import { registerLibraryIpc } from './library/library-ipc';
 import { VideoLibrary } from './library/video-library';
 import { registerLogIpc } from './log/log-ipc';
 import { describeError, log } from './log/logger';
+import { registerMediaIpc } from './media/media-ipc';
 import { handleMediaProtocol, registerMediaScheme } from './media/media-protocol';
 import { PlayerWindow, registerPlayerIpc } from './player/player-window';
 import { registerSettingIpc, SettingStore } from './setting/setting-store';
@@ -63,6 +64,7 @@ function startApp(): void {
 
       handleMediaProtocol(library);
       registerLibraryIpc(library, settingStore);
+      registerMediaIpc(library);
       registerSettingIpc(settingStore);
       registerLaunchIpc(libraryWindow);
       registerDefaultPlayerIpc();

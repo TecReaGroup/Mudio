@@ -103,6 +103,7 @@ export const IPC_CHANNEL = {
   libraryRemoveFromRecent: 'library:remove-from-recent',
   libraryRecordPlayback: 'library:record-playback',
   libraryAttachPoster: 'library:attach-poster',
+  mediaKeyframeTimes: 'media:keyframe-times',
   libraryChanged: 'library:changed',
   libraryFolderPickAndAdd: 'library-folder:pick-and-add',
   libraryFolderRemove: 'library-folder:remove',
@@ -156,6 +157,10 @@ export interface MudioApi {
     /** Sets exactly which playlists hold every video under the folder; titles no playlist has yet create one. */
     editPlaylists(folderPath: string, playlistTitles: string[]): Promise<void>;
     rescan(): Promise<void>;
+  };
+  media: {
+    /** Ascending keyframe times in seconds from the container index; empty when the file has none to offer. */
+    keyframeTimes(videoId: string): Promise<number[]>;
   };
   setting: {
     load(): Promise<AppSetting>;

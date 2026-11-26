@@ -30,6 +30,9 @@ const mudioApi: MudioApi = {
       ipcRenderer.invoke(IPC_CHANNEL.libraryFolderEditPlaylists, folderPath, playlistTitles),
     rescan: () => ipcRenderer.invoke(IPC_CHANNEL.libraryFolderRescan),
   },
+  media: {
+    keyframeTimes: videoId => ipcRenderer.invoke(IPC_CHANNEL.mediaKeyframeTimes, videoId),
+  },
   setting: {
     load: () => ipcRenderer.invoke(IPC_CHANNEL.settingLoad),
     save: setting => ipcRenderer.invoke(IPC_CHANNEL.settingSave, setting),

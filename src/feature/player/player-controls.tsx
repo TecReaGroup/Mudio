@@ -22,6 +22,8 @@ export interface PlaybackState {
 export interface PlayerCommands {
   togglePlay: () => void;
   seekTo: (timeSec: number) => void;
+  beginScrub: () => void;
+  endScrub: () => void;
   setVolume: (volume: number) => void;
   toggleMute: () => void;
   setPlaybackRate: (playbackRate: number) => void;
@@ -136,6 +138,8 @@ export function PlayerControls({ state, commands, isVisible }: PlayerControlsPro
           max={state.duration}
           step={0.1}
           onValueChange={commands.seekTo}
+          onDragStart={commands.beginScrub}
+          onDragEnd={commands.endScrub}
           className="mx-2"
         />
 

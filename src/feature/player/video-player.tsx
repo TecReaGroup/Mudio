@@ -10,9 +10,11 @@ import { Spinner } from '../../shared/ui/feedback';
 import { useSetting } from '../setting/setting-context';
 import { useMessage } from '../setting/use-message';
 import { PlayerControls, type PlaybackState, type PlayerCommands } from './player-controls';
-import { PlayerTopBar } from './player-top-bar';
+import { PlayerTopBar, type FrameSize } from './player-top-bar';
 import { useAutoHideControls } from './use-auto-hide-controls';
+import { useCoalescedSeek } from './use-coalesced-seek';
 import { useDelayedFlag } from './use-delayed-flag';
+import { useKeyframeSnap } from './use-keyframe-snap';
 import { usePlaybackProgress } from './use-playback-progress';
 import { PRESS_HOLD_RATE, useVideoPressGesture } from './use-video-press-gesture';
 
@@ -58,7 +60,13 @@ export function VideoPlayer({ video, autoPlay, onPrevious, onNext, loop, onEnded
   });
   const [hasPlaybackError, setHasPlaybackError] = useState(false);
   const [isBuffering, setIsBuffering] = useState(true);
+  const [isScrubbing, setIsScrubbing] = useState(false);
+  const [frameSize, setFrameSize] = useState<FrameSize | undefined>(undefined);
+  // Where the pointer is during a scrub, undefined otherwise. A ref, because the first change can arrive before the re-render.
+  const scrubTargetSec = useRef<number | undefined>(undefined);
   const isBufferingIndicatorShown = useDelayedFlag(isBuffering && !hasPlaybackError, BUFFERING_INDICATOR_DELAY_MS);
+  const seekLatest = useCoalescedSeek(videoRef);
+  const snapToKeyframe = useKeyframeSnap(video.id);
   const message = useMessage().player;
   const { areControlsVisible, revealControls, trackPointer, concealControls } = useAutoHideControls(state.isPlaying, videoRef);
   usePlaybackProgress(videoRef, video, setting.resumePlayback);
@@ -84,11 +92,12 @@ export function VideoPlayer({ video, autoPlay, onPrevious, onNext, loop, onEnded
     element.volume = state.volume;
     // Rewinding is a stream of seeks, which would only produce audio chirps.
     element.muted = state.isMuted || pressHold === 'rewind';
+    // Rate 0 freezes playback while scrubbing without firing pause/play, so the play state never flickers.
     // The hold is transient: the chosen rate in state is untouched and returns on release.
-    element.playbackRate = pressHold === 'fast-forward' ? PRESS_HOLD_RATE : state.playbackRate;
+    element.playbackRate = isScrubbing ? 0 : pressHold === 'fast-forward' ? PRESS_HOLD_RATE : state.playbackRate;
     sessionAudio.volume = state.volume;
     sessionAudio.isMuted = state.isMuted;
-  }, [state.volume, state.isMuted, state.playbackRate, pressHold]);
+  }, [state.volume, state.isMuted, state.playbackRate, pressHold, isScrubbing]);
 
   useEffect(() => {
     const syncFullscreen = () => updateState({ isFullscreen: document.fullscreenElement === containerRef.current });
@@ -99,9 +108,25 @@ export function VideoPlayer({ video, autoPlay, onPrevious, onNext, loop, onEnded
   const commands: PlayerCommands = {
     togglePlay,
     seekTo: timeSec => {
-      const element = videoRef.current!;
-      element.currentTime = clamp(timeSec, 0, element.duration || 0);
-      updateState({ currentTime: element.currentTime });
+      const durationSec = videoRef.current!.duration || 0;
+      const targetSec = clamp(timeSec, 0, durationSec);
+      if (scrubTargetSec.current === undefined) {
+        seekLatest(targetSec);
+      } else {
+        scrubTargetSec.current = targetSec;
+        seekLatest(Math.min(snapToKeyframe(targetSec), durationSec));
+      }
+      updateState({ currentTime: targetSec });
+    },
+    beginScrub: () => {
+      scrubTargetSec.current = videoRef.current!.currentTime;
+      setIsScrubbing(true);
+    },
+    // The preview showed the nearby keyframe; playback resumes from exactly where the pointer let go.
+    endScrub: () => {
+      seekLatest(scrubTargetSec.current!);
+      scrubTargetSec.current = undefined;
+      setIsScrubbing(false);
     },
     setVolume: requestedVolume => {
       // Snap away float drift from repeated ±VOLUME_STEP, so stepping down lands exactly on 0 and mutes.
@@ -171,10 +196,23 @@ export function VideoPlayer({ video, autoPlay, onPrevious, onNext, loop, onEnded
           updateState({ isPlaying: false });
           onPause();
         }}
-        onWaiting={() => setIsBuffering(true)}
+        // Every seek waits for its frame to decode; the previous frame stays on screen meanwhile, so only real stalls count.
+        onWaiting={event => {
+          if (!event.currentTarget.seeking) setIsBuffering(true);
+        }}
         onCanPlay={() => setIsBuffering(false)}
         onPlaying={() => setIsBuffering(false)}
-        onTimeUpdate={event => updateState({ currentTime: event.currentTarget.currentTime })}
+        // At playbackRate 0 a landed seek may never reach canplay/playing, which would leave the spinner stuck.
+        onSeeked={() => setIsBuffering(false)}
+        // While scrubbing the thumb follows the pointer; landed seeks lag behind it and would make it jump back.
+        onTimeUpdate={event => {
+          if (!isScrubbing) updateState({ currentTime: event.currentTarget.currentTime });
+        }}
+        // Audio-only files report 0×0; they have no resolution to show.
+        onLoadedMetadata={event => {
+          const { videoWidth: width, videoHeight: height } = event.currentTarget;
+          setFrameSize(width > 0 && height > 0 ? { width, height } : undefined);
+        }}
         onDurationChange={event => updateState({ duration: Number.isFinite(event.currentTarget.duration) ? event.currentTarget.duration : 0 })}
         onEnded={onEnded}
         onError={event => {
@@ -201,7 +239,7 @@ export function VideoPlayer({ video, autoPlay, onPrevious, onNext, loop, onEnded
           {PRESS_HOLD_RATE}x
         </div>
       )}
-      <PlayerTopBar video={video} isVisible={isChromeShown} />
+      <PlayerTopBar video={video} frameSize={frameSize} isVisible={isChromeShown} />
       <PlayerControls state={state} commands={commands} isVisible={isChromeShown} />
       {/* Paused-only mark, after the controls so it paints above their scrim. Pinned above the progress line's end; it only fades, never shifts. */}
       <BrandMark
