@@ -1,6 +1,5 @@
 import { CircleAlert, FastForward, Rewind } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { videoSourceUrl } from '../../shared/api/mudio';
 import type { VideoEntry } from '../../shared/contract/mudio-contract';
 import { cn } from '../../shared/lib/cn';
 import { describeError, log } from '../../shared/lib/logger';
@@ -8,6 +7,7 @@ import { BrandMark } from '../../shared/ui/brand-mark';
 import { MEDIA_GLASS_CLASS } from '../../shared/ui/control-class';
 import { Spinner } from '../../shared/ui/feedback';
 import { useSetting } from '../setting/setting-context';
+import { useVideoSource } from '../video-engine/use-video-source';
 import { useMessage } from '../setting/use-message';
 import { PlayerControls, type PlaybackState, type PlayerCommands } from './player-controls';
 import { PlayerTopBar, type FrameSize } from './player-top-bar';
@@ -64,10 +64,13 @@ export function VideoPlayer({ video, autoPlay, onPrevious, onNext, loop, onEnded
   const [frameSize, setFrameSize] = useState<FrameSize | undefined>(undefined);
   // Where the pointer is during a scrub, undefined otherwise. A ref, because the first change can arrive before the re-render.
   const scrubTargetSec = useRef<number | undefined>(undefined);
-  const isBufferingIndicatorShown = useDelayedFlag(isBuffering && !hasPlaybackError, BUFFERING_INDICATOR_DELAY_MS);
   const seekLatest = useCoalescedSeek(videoRef);
   const snapToKeyframe = useKeyframeSnap(video.id);
+  const source = useVideoSource(videoRef, video.id);
+  const hasFailed = hasPlaybackError || source.transcodeFailure !== undefined;
+  const isBufferingIndicatorShown = useDelayedFlag(isBuffering && !hasFailed, BUFFERING_INDICATOR_DELAY_MS);
   const message = useMessage().player;
+  const failureHint = source.transcodeFailure ? message.transcodeFailureHint[source.transcodeFailure] : message.playbackErrorHint;
   const { areControlsVisible, revealControls, trackPointer, concealControls } = useAutoHideControls(state.isPlaying, videoRef);
   usePlaybackProgress(videoRef, video, setting.resumePlayback);
 
@@ -182,7 +185,7 @@ export function VideoPlayer({ video, autoPlay, onPrevious, onNext, loop, onEnded
     >
       <video
         ref={videoRef}
-        src={videoSourceUrl(video.id)}
+        src={source.url}
         autoPlay={autoPlay}
         loop={loop}
         className="size-full object-contain"
@@ -216,6 +219,7 @@ export function VideoPlayer({ video, autoPlay, onPrevious, onNext, loop, onEnded
         onDurationChange={event => updateState({ duration: Number.isFinite(event.currentTarget.duration) ? event.currentTarget.duration : 0 })}
         onEnded={onEnded}
         onError={event => {
+          if (source.recoverFromError(event.currentTarget.error)) return;
           setHasPlaybackError(true);
           log('warn', 'Player', `Cannot play video ${video.id}: media error code ${event.currentTarget.error?.code ?? 'unknown'}`);
         }}
@@ -226,11 +230,11 @@ export function VideoPlayer({ video, autoPlay, onPrevious, onNext, loop, onEnded
           <span className="text-meta">{message.loading}</span>
         </div>
       )}
-      {hasPlaybackError && (
+      {hasFailed && (
         <div role="alert" className="absolute inset-0 flex animate-fade-in flex-col items-center justify-center gap-2 px-6 text-center text-white/85">
           <CircleAlert aria-hidden className="size-8" strokeWidth={1.5} />
           <p className="text-body">{message.playbackError}</p>
-          <p className="text-meta text-white/55">{message.playbackErrorHint}</p>
+          <p className="text-meta text-white/55">{failureHint}</p>
         </div>
       )}
       {pressHold && (

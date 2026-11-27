@@ -6,6 +6,7 @@ import { protocol } from 'electron';
 import { MEDIA_HOST, MEDIA_SCHEME } from '../../src/shared/contract/mudio-contract';
 import type { VideoLibrary } from '../library/video-library';
 import { describeError, log } from '../log/logger';
+import { serveFirstFrame, serveTranscode } from './video-transcoder';
 
 const CONTENT_TYPE_BY_EXTENSION: Record<string, string> = {
   '.mp4': 'video/mp4',
@@ -85,8 +86,10 @@ export function registerMediaScheme(): void {
 /** Serves only library entries by id, so the renderer can never read arbitrary paths. */
 export function handleMediaProtocol(library: VideoLibrary): void {
   protocol.handle(MEDIA_SCHEME, async request => {
-    const { host, pathname } = new URL(request.url);
+    const { host, pathname, searchParams } = new URL(request.url);
     const video = library.find(pathname.slice(1));
+    if (video && host === MEDIA_HOST.transcode) return serveTranscode(video.filePath, Number(searchParams.get('start') ?? 0));
+    if (video && host === MEDIA_HOST.firstFrame) return serveFirstFrame(video.filePath);
     const filePath = host === MEDIA_HOST.video ? video?.filePath
       : host === MEDIA_HOST.thumbnail && video?.hasThumbnail ? library.thumbnailPath(video.id)
         : undefined;

@@ -1,8 +1,8 @@
 import { useEffect, useRef } from 'react';
-import { mudio, videoSourceUrl } from '../../shared/api/mudio';
+import { mudio } from '../../shared/api/mudio';
 import type { VideoEntry } from '../../shared/contract/mudio-contract';
 import { describeError, log } from '../../shared/lib/logger';
-import { capturePoster } from './capture-poster';
+import { capturePoster } from '../video-engine/capture-poster';
 
 /** Generates missing thumbnails one video at a time, picking up videos imported mid-run. */
 export function usePosterBackfill(videos: VideoEntry[]): void {
@@ -24,7 +24,7 @@ export function usePosterBackfill(videos: VideoEntry[]): void {
         // Attempt each video once per session; unsupported codecs would fail forever.
         attemptedIds.current.add(video.id);
         try {
-          const poster = await capturePoster(videoSourceUrl(video.id));
+          const poster = await capturePoster(video.id);
           await mudio.library.attachPoster(video.id, poster.jpegBytes, poster.durationSec);
         } catch (error) {
           log('warn', 'Poster', `Thumbnail skipped for ${video.id}: ${describeError(error)}`);

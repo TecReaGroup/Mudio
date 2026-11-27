@@ -60,6 +60,10 @@ const ZH_CN = {
     loading: '加载中',
     playbackError: '无法播放此视频',
     playbackErrorHint: '文件可能已被移动，或使用了不受支持的编码格式',
+    transcodeFailureHint: {
+      'unsupported-codec': '不支持此视频的编码格式，系统中的 ffmpeg 也无法转码',
+      'ffmpeg-missing': '不支持此视频的编码格式，且系统中没有 ffmpeg。安装 ffmpeg 并加入 PATH 后即可播放',
+    },
   },
   setting: {
     category: { general: '通用', language: '语言', libraryFolder: '文件夹' },
@@ -156,6 +160,10 @@ const EN: Messages = {
     loading: 'Loading',
     playbackError: 'Cannot play this video',
     playbackErrorHint: 'The file may have been moved, or uses an unsupported codec',
+    transcodeFailureHint: {
+      'unsupported-codec': 'This video uses an unsupported codec, and the system ffmpeg could not transcode it',
+      'ffmpeg-missing': 'This video uses an unsupported codec, and no ffmpeg was found. Install ffmpeg and add it to PATH to play it',
+    },
   },
   setting: {
     category: { general: 'General', language: 'Language', libraryFolder: 'Folders' },

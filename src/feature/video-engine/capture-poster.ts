@@ -1,7 +1,7 @@
+import { videoSourceUrl } from '../../shared/api/mudio';
+import { buildMediaUrl, MEDIA_HOST, TRANSCODE_RESPONSE } from '../../shared/contract/mudio-contract';
+
 const POSTER_WIDTH = 480;
-const POSTER_POSITION_RATIO = 0.1;
-const POSTER_MAX_OFFSET_SEC = 30;
-const POSTER_FALLBACK_OFFSET_SEC = 1;
 const POSTER_JPEG_QUALITY = 0.8;
 const CAPTURE_TIMEOUT_MS = 15_000;
 
@@ -11,7 +11,7 @@ export interface CapturedPoster {
   durationSec: number | null;
 }
 
-function waitForMediaEvent(video: HTMLVideoElement, eventName: 'loadedmetadata' | 'seeked'): Promise<void> {
+function waitForMediaEvent(video: HTMLVideoElement, eventName: 'loadeddata'): Promise<void> {
   return new Promise((resolve, reject) => {
     const timer = window.setTimeout(() => finish(new Error(`Timed out waiting for ${eventName}`)), CAPTURE_TIMEOUT_MS);
     const onEvent = () => finish();
@@ -28,25 +28,22 @@ function waitForMediaEvent(video: HTMLVideoElement, eventName: 'loadedmetadata' 
   });
 }
 
-/** Grabs a representative frame from an off-screen <video>; rejects when the codec is unsupported. */
-export async function capturePoster(sourceUrl: string): Promise<CapturedPoster> {
+/** Grabs the first frame from an off-screen <video>; rejects when Chromium cannot decode the codec. */
+async function captureFirstFrameInBrowser(videoId: string): Promise<CapturedPoster> {
   const video = document.createElement('video');
   // Media is served with CORS headers; without this the canvas becomes tainted and cannot export.
   video.crossOrigin = 'anonymous';
   video.muted = true;
-  video.preload = 'metadata';
+  // "metadata" may stop before any frame is decoded; loadeddata needs the first one.
+  video.preload = 'auto';
 
   try {
-    const metadataLoaded = waitForMediaEvent(video, 'loadedmetadata');
-    video.src = sourceUrl;
-    await metadataLoaded;
+    // loadeddata fires once the first frame is decoded and drawable; no seek needed.
+    const firstFrameLoaded = waitForMediaEvent(video, 'loadeddata');
+    video.src = videoSourceUrl(videoId);
+    await firstFrameLoaded;
 
     const durationSec = Number.isFinite(video.duration) ? video.duration : null;
-    const seeked = waitForMediaEvent(video, 'seeked');
-    video.currentTime = durationSec === null
-      ? POSTER_FALLBACK_OFFSET_SEC
-      : Math.min(durationSec * POSTER_POSITION_RATIO, POSTER_MAX_OFFSET_SEC);
-    await seeked;
 
     const canvas = document.createElement('canvas');
     canvas.width = POSTER_WIDTH;
@@ -59,4 +56,16 @@ export async function capturePoster(sourceUrl: string): Promise<CapturedPoster> 
     video.removeAttribute('src');
     video.load();
   }
+}
+
+async function extractFirstFrameWithFfmpeg(videoId: string): Promise<CapturedPoster> {
+  const response = await fetch(buildMediaUrl(MEDIA_HOST.firstFrame, videoId));
+  if (!response.ok) throw new Error(`ffmpeg frame extraction responded with status ${response.status}`);
+  const durationSec = Number(response.headers.get(TRANSCODE_RESPONSE.durationHeader));
+  return { jpegBytes: new Uint8Array(await response.arrayBuffer()), durationSec: Number.isFinite(durationSec) ? durationSec : null };
+}
+
+/** The video's first frame as a JPEG poster: decoded in the browser, or by the system's ffmpeg for codecs Chromium lacks. */
+export function capturePoster(videoId: string): Promise<CapturedPoster> {
+  return captureFirstFrameInBrowser(videoId).catch(() => extractFirstFrameWithFfmpeg(videoId));
 }

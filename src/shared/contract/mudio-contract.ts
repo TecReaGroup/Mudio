@@ -8,6 +8,18 @@ export const MEDIA_SCHEME = 'mudio-media';
 export const MEDIA_HOST = {
   video: 'video',
   thumbnail: 'thumbnail',
+  /** Fragmented H.264/AAC MP4 made by the system's ffmpeg, for codecs Chromium cannot decode; `?start=<sec>` picks where it begins. */
+  transcode: 'transcode',
+  /** The first frame as a JPEG, extracted by the system's ffmpeg for posters the renderer cannot capture. */
+  firstFrame: 'first-frame',
+} as const;
+
+/** What ffmpeg-backed responses say beyond their body: MSE needs the timeline length and track layout before the first append. */
+export const TRANSCODE_RESPONSE = {
+  durationHeader: 'X-Duration-Sec',
+  hasAudioHeader: 'X-Has-Audio',
+  /** No ffmpeg on PATH; any other failure status means ffmpeg could not transcode the file. */
+  ffmpegMissingStatus: 503,
 } as const;
 
 export type MediaHost = (typeof MEDIA_HOST)[keyof typeof MEDIA_HOST];
