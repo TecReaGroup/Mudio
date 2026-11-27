@@ -8,7 +8,10 @@ export const MEDIA_SCHEME = 'mudio-media';
 export const MEDIA_HOST = {
   video: 'video',
   thumbnail: 'thumbnail',
-  /** Fragmented H.264/AAC MP4 made by the system's ffmpeg, for codecs Chromium cannot decode; `?start=<sec>` picks where it begins. */
+  /**
+   * Fragmented H.264/AAC MP4 made by the system's ffmpeg, for codecs Chromium cannot decode; `?start=<sec>` picks where
+   * it begins. Its timestamps count from 0 at that start: the mp4 muxer rebases fragments, `-output_ts_offset` included.
+   */
   transcode: 'transcode',
   /** The first frame as a JPEG, extracted by the system's ffmpeg for posters the renderer cannot capture. */
   firstFrame: 'first-frame',

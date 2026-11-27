@@ -167,9 +167,9 @@ function transcodeArgs(filePath: string, startSec: number, attempt: TranscodeAtt
     '-c:v', attempt.encoder, ...ENCODER_SPEED_ARGS[attempt.encoder],
     '-pix_fmt', ENCODER_PIXEL_FORMAT, '-b:v', VIDEO_BITRATE,
     '-force_key_frames', `expr:gte(t,n_forced*${KEYFRAME_INTERVAL_SEC})`,
+    // No reordering: frames leave the encoder at once, and the first frame's presentation time is exactly the start.
+    '-bf', '0',
     '-c:a', 'aac', '-ac', '2', '-b:a', AUDIO_BITRATE,
-    // Keeps source timestamps, so the player's timeline is the file's own and a seek needs no offset bookkeeping.
-    '-output_ts_offset', start,
     '-f', 'mp4', '-movflags', 'empty_moov+default_base_moof+frag_keyframe', '-frag_duration', String(FRAGMENT_DURATION_US),
     'pipe:1',
   ];
