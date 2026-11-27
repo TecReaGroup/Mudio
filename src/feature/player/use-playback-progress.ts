@@ -8,10 +8,10 @@ const RESUME_MIN_POSITION_SEC = 5;
 const RESUME_END_MARGIN_SEC = 5;
 
 /**
- * Restores the saved position on load and periodically persists the current one.
- * Expects the owning component to be keyed by video id, so it runs once per video.
+ * Restores the saved position on load and periodically persists the current one; returns the position it will
+ * restore, or 0. Expects the owning component to be keyed by video id, so it runs once per video.
  */
-export function usePlaybackProgress(videoRef: RefObject<HTMLVideoElement | null>, video: VideoEntry, shouldResume: boolean): void {
+export function usePlaybackProgress(videoRef: RefObject<HTMLVideoElement | null>, video: VideoEntry, shouldResume: boolean): number {
   // Snapshot at mount: the entry keeps updating while we save progress.
   const resumeFrom = useRef(shouldResume ? video.resumePositionSec : 0);
 
@@ -52,4 +52,6 @@ export function usePlaybackProgress(videoRef: RefObject<HTMLVideoElement | null>
       if (!element.ended && element.currentTime > 0) savePosition(element.currentTime);
     };
   }, [videoRef, video.id]);
+
+  return resumeFrom.current;
 }

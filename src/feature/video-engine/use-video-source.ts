@@ -9,6 +9,8 @@ const BUFFER_AHEAD_SEC = 30;
 const BUFFER_BEHIND_SEC = 20;
 // Requested slightly before the target so the first appended frame covers it; MSE stalls at a gap before buffered media.
 const STREAM_LEAD_SEC = 0.5;
+// A seek this little past what the running stream has delivered waits for it: restarting ffmpeg takes longer.
+const STREAM_CATCH_UP_SEC = 3;
 // Only has to be a supported declaration: Chromium decodes whichever H.264 profile the encoder actually emits.
 const VIDEO_CODEC = 'avc1.640033';
 const AUDIO_CODEC = 'mp4a.40.2';
@@ -18,6 +20,8 @@ export type TranscodeFailure = 'ffmpeg-missing' | 'unsupported-codec';
 
 interface VideoSource {
   url: string;
+  /** Playing ffmpeg's transcode, whose keyframes are its own: the source file's keyframe index does not apply. */
+  isTranscoded: boolean;
   /** Set once the system's ffmpeg could not take over either. */
   transcodeFailure: TranscodeFailure | undefined;
   /** Handles the element's error: an unsupported codec moves playback to ffmpeg once; returns false when nothing is left to try. */
@@ -26,6 +30,12 @@ interface VideoSource {
 
 function transcodedStreamUrl(videoId: string, startSec: number): string {
   return `${buildMediaUrl(MEDIA_HOST.transcode, videoId)}?start=${startSec.toFixed(3)}`;
+}
+
+/** Media the current stream holds or is about to deliver, in source time. */
+interface StreamSpan {
+  startSec: number;
+  endSec: number;
 }
 
 function bufferedEndAround(ranges: TimeRanges, timeSec: number): number | undefined {
@@ -57,7 +67,7 @@ function nextEvent(target: EventTarget, types: string[], signal: AbortSignal): P
 /**
  * Feeds ffmpeg's transcode into Media Source Extensions. The stream keeps the source's timestamps and the MediaSource
  * its duration, so currentTime, seeking and resume behave exactly as with direct playback. A seek outside the
- * buffered media restarts the transcode at the target.
+ * current stream's reach restarts the transcode at the target.
  */
 class TranscodedPlayback {
   readonly url: string;
@@ -65,16 +75,22 @@ class TranscodedPlayback {
   private readonly lifetime = new AbortController();
   private sourceBuffer: SourceBuffer | undefined;
   private currentStream: AbortController | undefined;
+  // Judged by the current stream alone: media left over from an earlier one is wiped once this stream's response arrives.
+  private streamSpan: StreamSpan | undefined;
 
   constructor(
     private readonly element: HTMLVideoElement,
     private readonly videoId: string,
+    /** Where playback is expected to begin, such as a resume position; a stream from 0 would be restarted right away. */
+    startSec: number,
     /** Called at most once; playback has stopped for good by then. */
     private readonly onFailure: (failure: TranscodeFailure) => void,
   ) {
     this.url = URL.createObjectURL(this.mediaSource);
-    this.mediaSource.addEventListener('sourceopen', () => void this.streamFrom(element.currentTime), { once: true, signal: this.lifetime.signal });
+    this.mediaSource.addEventListener('sourceopen', () => void this.streamFrom(startSec), { once: true, signal: this.lifetime.signal });
     element.addEventListener('seeking', this.followSeek, { signal: this.lifetime.signal });
+    // Runs after the resume listener, so it only steps in when playback did not begin at startSec after all.
+    element.addEventListener('loadedmetadata', this.followSeek, { once: true, signal: this.lifetime.signal });
   }
 
   dispose(): void {
@@ -84,9 +100,10 @@ class TranscodedPlayback {
   }
 
   private readonly followSeek = () => {
-    if (this.sourceBuffer && bufferedEndAround(this.sourceBuffer.buffered, this.element.currentTime) === undefined) {
-      void this.streamFrom(this.element.currentTime);
-    }
+    const timeSec = this.element.currentTime;
+    const span = this.streamSpan;
+    if (span && span.startSec <= timeSec && timeSec <= span.endSec + STREAM_CATCH_UP_SEC) return;
+    void this.streamFrom(timeSec);
   };
 
   /** Replaces whatever stream is running; every await re-checks the signal, since a newer seek may have taken over. */
@@ -94,8 +111,10 @@ class TranscodedPlayback {
     this.currentStream?.abort();
     const stream = new AbortController();
     this.currentStream = stream;
+    const startSec = Math.max(0, targetSec - STREAM_LEAD_SEC);
+    this.streamSpan = { startSec, endSec: startSec };
     try {
-      const response = await fetch(transcodedStreamUrl(this.videoId, Math.max(0, targetSec - STREAM_LEAD_SEC)), { signal: stream.signal });
+      const response = await fetch(transcodedStreamUrl(this.videoId, startSec), { signal: stream.signal });
       if (!response.ok) {
         const failure = response.status === TRANSCODE_RESPONSE.ffmpegMissingStatus ? 'ffmpeg-missing' : 'unsupported-codec';
         this.fail(failure, `transcode responded with status ${response.status}`);
@@ -108,6 +127,9 @@ class TranscodedPlayback {
       for (let chunk = await reader.read(); !chunk.done; chunk = await reader.read()) {
         await this.waitForBufferRoom(sourceBuffer, stream.signal);
         await this.append(sourceBuffer, chunk.value, stream.signal);
+        stream.signal.throwIfAborted();
+        const { buffered } = sourceBuffer;
+        if (buffered.length > 0) this.streamSpan = { startSec: buffered.start(0), endSec: buffered.end(buffered.length - 1) };
       }
       stream.signal.throwIfAborted();
       this.mediaSource.endOfStream();
@@ -165,7 +187,7 @@ class TranscodedPlayback {
 }
 
 /** Direct file playback first; the system's ffmpeg takes over only once Chromium has rejected the codec. */
-export function useVideoSource(videoRef: RefObject<HTMLVideoElement | null>, videoId: string): VideoSource {
+export function useVideoSource(videoRef: RefObject<HTMLVideoElement | null>, videoId: string, startSec: number): VideoSource {
   const [transcodedPlayback, setTranscodedPlayback] = useState<TranscodedPlayback | undefined>(undefined);
   const [transcodeFailure, setTranscodeFailure] = useState<TranscodeFailure | undefined>(undefined);
 
@@ -173,11 +195,12 @@ export function useVideoSource(videoRef: RefObject<HTMLVideoElement | null>, vid
 
   return {
     url: transcodedPlayback?.url ?? videoSourceUrl(videoId),
+    isTranscoded: transcodedPlayback !== undefined,
     transcodeFailure,
     recoverFromError: error => {
       if (transcodedPlayback || error?.code !== MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED) return false;
       log('info', 'Player', `Codec unsupported for ${videoId}, switching to transcoded playback`);
-      setTranscodedPlayback(new TranscodedPlayback(videoRef.current!, videoId, setTranscodeFailure));
+      setTranscodedPlayback(new TranscodedPlayback(videoRef.current!, videoId, startSec, setTranscodeFailure));
       return true;
     },
   };

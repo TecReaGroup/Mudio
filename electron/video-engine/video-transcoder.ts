@@ -1,5 +1,5 @@
 import { spawn, type ChildProcessByStdio } from 'node:child_process';
-import { Readable } from 'node:stream';
+import type { Readable } from 'node:stream';
 import { app } from 'electron';
 import { TRANSCODE_RESPONSE } from '../../src/shared/contract/mudio-contract';
 import { describeError, log } from '../log/logger';
@@ -53,6 +53,9 @@ interface TranscodeAttempt {
   decodeArgs: string[];
   encoder: string;
 }
+
+/** The attempt's ffmpeg was killed for a newer seek of the same file; its request is already abandoned. */
+class TranscodeSupersededError extends Error {}
 
 let attempts: Promise<TranscodeAttempt[]> | undefined;
 const probeByFile = new Map<string, Promise<MediaProbe>>();
@@ -122,17 +125,18 @@ async function encodesTestFrame(encoder: string): Promise<boolean> {
   return exitCode === 0;
 }
 
+/** Tests every encoder at once, since each test is mostly ffmpeg and driver startup; keeps the list's preference order. */
 async function firstWorkingEncoder(encoders: string[]): Promise<string | undefined> {
-  for (const encoder of encoders) {
-    if (await encodesTestFrame(encoder)) return encoder;
-  }
-  return undefined;
+  const works = await Promise.all(encoders.map(encodesTestFrame));
+  return encoders.find((_encoder, index) => works[index]);
 }
 
 /** Hardware first; the software attempt is what remains when the GPU path fails for a file. */
 async function detectAttempts(): Promise<TranscodeAttempt[]> {
-  const hardwareEncoder = await firstWorkingEncoder(HARDWARE_H264_ENCODERS);
-  const softwareEncoder = await firstWorkingEncoder([SOFTWARE_H264_ENCODER]);
+  const [hardwareEncoder, softwareEncoder] = await Promise.all([
+    firstWorkingEncoder(HARDWARE_H264_ENCODERS),
+    firstWorkingEncoder([SOFTWARE_H264_ENCODER]),
+  ]);
   const preferredEncoder = hardwareEncoder ?? softwareEncoder;
   const fallbackEncoder = softwareEncoder ?? hardwareEncoder;
   if (!preferredEncoder || !fallbackEncoder) throw new Error('The system ffmpeg has no usable H.264 encoder');
@@ -211,26 +215,61 @@ function awaitFirstOutput(child: FfmpegProcess, stderrTail: () => string): Promi
   });
 }
 
+/**
+ * ffmpeg's stdout, ending cleanly only when ffmpeg exited cleanly. The player declares end of stream on a clean end,
+ * which truncates the media duration to what was buffered, so a crashed transcode must surface as an error instead.
+ */
+function outputStream(child: FfmpegProcess, stderrTail: () => string): ReadableStream<Uint8Array> {
+  const { stdout } = child;
+  let isCancelled = false;
+  return new ReadableStream<Uint8Array>({
+    start(controller) {
+      stdout.on('data', (chunk: Buffer) => {
+        // ffmpeg may still flush output between the cancel and its death; enqueueing then would throw.
+        if (isCancelled) return;
+        controller.enqueue(chunk);
+        // Pausing lets the pipe fill, so ffmpeg blocks instead of encoding ahead of the player.
+        if (controller.desiredSize! <= 0) stdout.pause();
+      });
+      child.once('close', (exitCode, signal) => {
+        if (isCancelled) return;
+        if (exitCode === 0) {
+          controller.close();
+          return;
+        }
+        log('warn', 'Transcode', `ffmpeg stopped mid-stream with code ${exitCode ?? signal}: ${stderrTail()}`);
+        controller.error(new Error(`ffmpeg stopped mid-stream with code ${exitCode ?? signal}`));
+      });
+    },
+    pull() {
+      stdout.resume();
+    },
+    // The player seeked or closed; ffmpeg must not outlive the response.
+    cancel() {
+      isCancelled = true;
+      child.kill();
+    },
+  });
+}
+
 async function streamTranscode(filePath: string, startSec: number): Promise<ReadableStream<Uint8Array>> {
   const detected = await loadAttempts();
   for (let index = firstAttemptByFile.get(filePath) ?? 0; index < detected.length; index++) {
     const attempt = detected[index];
+    const spawnedAt = performance.now();
     const child = spawnReplacing(filePath, transcodeArgs(filePath, startSec, attempt));
     const stderrTail = collectStderrTail(child);
     try {
       await awaitFirstOutput(child, stderrTail);
     } catch (error) {
+      // Falling back here would kill the newer seek's ffmpeg in turn, until every request in the burst fails.
+      if (child.killed) throw new TranscodeSupersededError();
       log('warn', 'Transcode', `${attempt.label} failed: ${describeError(error)}`);
       continue;
     }
     firstAttemptByFile.set(filePath, index);
-    log('info', 'Transcode', `Streaming from ${startSec.toFixed(1)}s with ${attempt.label}`);
-    child.once('exit', (exitCode, signal) => {
-      if (exitCode !== 0 && signal === null) log('warn', 'Transcode', `ffmpeg stopped mid-stream with code ${exitCode}: ${stderrTail()}`);
-    });
-    // A cancelled response (the player seeked or closed) destroys stdout; ffmpeg must not outlive it.
-    child.stdout.once('close', () => child.kill());
-    return Readable.toWeb(child.stdout) as ReadableStream<Uint8Array>;
+    log('info', 'Transcode', `Streaming from ${startSec.toFixed(1)}s with ${attempt.label}, first output after ${Math.round(performance.now() - spawnedAt)} ms`);
+    return outputStream(child, stderrTail);
   }
   throw new Error('Every transcode attempt failed');
 }
@@ -241,9 +280,16 @@ async function streamTranscode(filePath: string, startSec: number): Promise<Read
  */
 export async function serveTranscode(filePath: string, startSec: number): Promise<Response> {
   if (!Number.isFinite(startSec) || startSec < 0) return new Response(null, { status: 400, headers: CORS_HEADERS });
+  // Probing and starting the transcode are independent ffmpeg runs; overlapping them shortens every first open.
+  const streaming = streamTranscode(filePath, startSec);
+  // Its failure is awaited below, possibly only after the probe; an unheard rejection in between would crash the process.
+  streaming.catch(() => undefined);
   try {
-    const probe = await probeMedia(filePath);
-    const body = await streamTranscode(filePath, startSec);
+    const probe = await probeMedia(filePath).catch(async (error: unknown) => {
+      await streaming.then(body => body.cancel(), () => undefined);
+      throw error;
+    });
+    const body = await streaming;
     return new Response(body, {
       status: 200,
       headers: {
@@ -255,6 +301,10 @@ export async function serveTranscode(filePath: string, startSec: number): Promis
       },
     });
   } catch (error) {
+    if (error instanceof TranscodeSupersededError) {
+      log('debug', 'Transcode', `Transcode from ${startSec.toFixed(1)}s superseded by a newer seek`);
+      return new Response(null, { status: 409, headers: CORS_HEADERS });
+    }
     return failureResponse(error, `Cannot transcode ${filePath}`);
   }
 }

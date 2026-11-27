@@ -66,13 +66,13 @@ export function VideoPlayer({ video, autoPlay, onPrevious, onNext, loop, onEnded
   const scrubTargetSec = useRef<number | undefined>(undefined);
   const seekLatest = useCoalescedSeek(videoRef);
   const snapToKeyframe = useKeyframeSnap(video.id);
-  const source = useVideoSource(videoRef, video.id);
+  const resumeFromSec = usePlaybackProgress(videoRef, video, setting.resumePlayback);
+  const source = useVideoSource(videoRef, video.id, resumeFromSec);
   const hasFailed = hasPlaybackError || source.transcodeFailure !== undefined;
   const isBufferingIndicatorShown = useDelayedFlag(isBuffering && !hasFailed, BUFFERING_INDICATOR_DELAY_MS);
   const message = useMessage().player;
   const failureHint = source.transcodeFailure ? message.transcodeFailureHint[source.transcodeFailure] : message.playbackErrorHint;
   const { areControlsVisible, revealControls, trackPointer, concealControls } = useAutoHideControls(state.isPlaying, videoRef);
-  usePlaybackProgress(videoRef, video, setting.resumePlayback);
 
   const updateState = (patch: Partial<PlaybackState>) => setState(current => ({ ...current, ...patch }));
   const togglePlay = () => {
@@ -117,7 +117,9 @@ export function VideoPlayer({ video, autoPlay, onPrevious, onNext, loop, onEnded
         seekLatest(targetSec);
       } else {
         scrubTargetSec.current = targetSec;
-        seekLatest(Math.min(snapToKeyframe(targetSec), durationSec));
+        // A transcoded seek outside the buffer restarts ffmpeg either way; snapping would only make the release seek
+        // land elsewhere and restart it a second time.
+        seekLatest(source.isTranscoded ? targetSec : Math.min(snapToKeyframe(targetSec), durationSec));
       }
       updateState({ currentTime: targetSec });
     },
